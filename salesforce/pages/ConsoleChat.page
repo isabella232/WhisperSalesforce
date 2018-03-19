@@ -1,69 +1,57 @@
 <apex:page >
     <apex:includeScript value="/support/console/41.0/integration.js"/>
     <script type="text/javascript">
-    
-        var chatKey = '';
-        const ENDPOINT = 'https://jsonplaceholder.typicode.com/posts/1';
-
+        const SUGGESTION_ENDPOINT = 'https://my-json-server.typicode.com/CoveoWhisper/WhisperSalesforce/suggestion';
+        const CHAT_VISITOR = 'Chasitor';
+        
         var chatStartedHandler = function(result) {
-            alert('A new engaged chat has started for this chatKey: ' + result.chatKey);
-            chatKey = result.chatKey;
-            sforce.console.chat.onNewMessage(chatKey, onNewMessageHandler);
-        }
-
-        //Test api - Need Https 
-        var onNewMessageHandler = function (result) {
-            fetch( ENDPOINT )
-                .then(data => data.json())
-                .then(json =>  createAllButton(json))
-                .catch( error =>  alert('Invalid URL, there is no response., error: ' + error));
-        }
-
-        function setAgentInputSuccess(result) {
-            //Report whether setting the agent's input was succesful
-            if (result.success == true) {
-                alert('The text in the agent input has been updated');
-            } else {
-                alert('Setting the agent input was not Succesful');
-            }
-        };
-
-        function createAllButton(json) {
-            //Simulate array
-            let array = new Array();
-            array[0] = json;
-
-            array.forEach(element => {
-                createButton(element);
-            });
-        }
-
-        function createButton(json) {
-            let openDiv = '<div onclick="btnClick(this)">'
-            let title = '<p class="title">' + json.userId + '</p>';
-            let body = '<p class="body">' + json.body + '</p>';
-            let uri = 'www.google.ca';
-            let uriElement = '<a class="uri" href="'+uri+'">' + uri + '</a>';
-            let closeDiv = '</div>';
-            document.getElementById('messageSection').innerHTML += 
-                openDiv + title + body + uriElement + closeDiv;
-        }
-
-        function btnClick(html) {
-            let title = html.getElementsByClassName('title')[0].innerText;
-            let body = html.getElementsByClassName('body')[0].innerText;
-            let uri = html.getElementsByClassName('uri')[0].innerText;
-            setAgentInput(title + ' ' + body + ' ' + uri);
-        }
-
-
-        function setAgentInput(msg) {
-            sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
+            let chatKey = result.chatKey;
+            sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey));       
         }
 
         sforce.console.chat.onChatStarted(chatStartedHandler);
+
+        var onNewMessageHandler = function (result, chatKey) {
+            if (result.type == CHAT_VISITOR) {
+                fetch( SUGGESTION_ENDPOINT )
+                    .then(data => data.json())
+                    .then(json =>  createAllButtons(json, chatKey))
+                    .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+            }
+        }
+
+        function setAgentInputSuccess(result) {
+            if (!result.success) {
+                console.log(result)
+            } 
+        }
+
+        function createAllButtons(json, chatKey) {
+            json.forEach(element => {
+                createButton(element, chatKey);
+            });
+        }
+
+        function createButton(json, chatKey) {
+            let openDiv = '<div onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">'
+            let sentence = '<p class="sentence">' + json.sentence + '</p>';
+            let url = '<a class="url" href="' + json.url + '">' + json.url + '</a>';
+            let closeDiv = '</div>';
+            document.getElementById('suggestionSection').innerHTML += 
+                openDiv + sentence + url + closeDiv;
+        }
+
+        function chooseSuggestionClick(html, chatKey) {
+            let sentence = html.getElementsByClassName('sentence')[0].innerText;
+            let url = html.getElementsByClassName('url')[0].innerText;
+            setAgentInput(sentence + ' ' + url, chatKey);
+        }
+
+        function setAgentInput(msg, chatKey) {
+            sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
+        } 
     </script>
 
-    <div id="messageSection">
+    <div id="suggestionSection">
     </div>
 </apex:page>

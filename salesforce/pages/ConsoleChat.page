@@ -51,7 +51,7 @@
             let closeContent = '</div>';
             let closeDiv = '</div>';
             document.getElementById('suggestionSection').innerHTML += 
-                openDiv + openContent + from + recommend + sentence + url + + closeContent +closeDiv;
+                openDiv + openContent + from + recommend + sentence + url + closeContent +closeDiv;
         }
 
         function chooseSuggestionClick(html, chatKey) {

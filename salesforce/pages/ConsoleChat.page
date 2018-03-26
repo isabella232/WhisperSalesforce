@@ -43,16 +43,15 @@
 
         function createButton(json, chatKey) {
             let openDiv = '<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">';
-
+            let openContent = '<div class="content">'
             let from = '<p class="suggestionFrom"><b>From</b> Your assistant Whisper</p>';
-            let recommend = '<p><b>I Recommand this answer</b></p>';
-            let sentence = '<p class="sentence">' + json.title + '</p>';
+            let recommend = '<div><b>I Recommand this answer</b></div>';
+            let sentence = '<div class="sentence">' + json.title + '</div>';
             let url = '<a class="url" href="' + json.uri + '">' + json.uri + '</a>';
-
-
+            let closeContent = '</div>';
             let closeDiv = '</div>';
             document.getElementById('suggestionSection').innerHTML += 
-                openDiv + from + recommend + sentence + url + closeDiv;
+                openDiv + openContent + from + recommend + sentence + url + + closeContent +closeDiv;
         }
 
         function chooseSuggestionClick(html, chatKey) {
@@ -66,26 +65,54 @@
         } 
     </script>
     <style>
+        body {
+            margin: 0px !important;
+        }
+        #whisperHeader {
+            background-color:#4388CC;
+        }
+        #whisperTitle {
+            color:#fff;
+            text-align: center;
+            font-size: 1.2em;
+            padding: 6px 0;
+            font-weight: bold;
+        }
         #suggestionSection a {
             text-decoration: none;
             color :#2f8fe4;
         }
-        #suggestionSection .suggestion {
+        .suggestion .content {
+            padding-bottom: 8px;
             border-bottom: 1px solid #444;
-            padding-top:10px;
-        }
-        #suggestionSection .suggestionFrom {
-            color:  color :#2f8fe4;
-        }
-        #suggestionSection .url{
-            white-space: nowrap; 
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .suggestion .sentence {
+            margin-bottom: 8px;
+        }
+        .suggestion:hover {
+            cursor: pointer;
+            background-color: #eee;
+        }
+        #suggestionSection .suggestion { 
+            padding: 0 15px;
+        }
+        #suggestionSection .suggestionFrom:not(b) {
+            color: #2f8fe4;
         }
         #suggestionSection b {
             color: #000;
         }
     </style>
-    <div id="suggestionSection">
+    <div id="whisperWrapper">
+        <div id="whisperHeader">
+            <div id="whisperTitle">
+                Whisper
+            </div> 
+        </div>
+        <div id="suggestionSection">
+        </div>
     </div>
 </apex:page>

@@ -1,9 +1,10 @@
 <apex:page >
     <apex:includeScript value="/support/console/41.0/integration.js"/>
+    
     <script type="text/javascript">
-        const SUGGESTION_ENDPOINT = 'https://my-json-server.typicode.com/CoveoWhisper/WhisperSalesforce/suggestion';
+        const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
         const CHAT_VISITOR = 'Chasitor';
-        
+
         var chatStartedHandler = function(result) {
             let chatKey = result.chatKey;
             sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey));       
@@ -12,8 +13,16 @@
         sforce.console.chat.onChatStarted(chatStartedHandler);
 
         var onNewMessageHandler = function (result, chatKey) {
+            let data = {
+                chatkey: chatKey,
+                Querry: result.content
+            };
+            let headers = {
+                "Content-Type": "application/json"
+            };
+
             if (result.type == CHAT_VISITOR) {
-                fetch( SUGGESTION_ENDPOINT )
+                fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: headers })
                     .then(data => data.json())
                     .then(json =>  createAllButtons(json, chatKey))
                     .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
@@ -27,18 +36,23 @@
         }
 
         function createAllButtons(json, chatKey) {
-            json.forEach(element => {
+            json.forEach( (element) => {    
                 createButton(element, chatKey);
             });
         }
 
         function createButton(json, chatKey) {
-            let openDiv = '<div onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">'
-            let sentence = '<p class="sentence">' + json.sentence + '</p>';
-            let url = '<a class="url" href="' + json.url + '">' + json.url + '</a>';
+            let openDiv = '<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">';
+
+            let from = '<p class="suggestionFrom"><b>From</b> Your assistant Whisper</p>';
+            let recommend = '<p><b>I Recommand this answer</b></p>';
+            let sentence = '<p class="sentence">' + json.title + '</p>';
+            let url = '<a class="url" href="' + json.uri + '">' + json.uri + '</a>';
+
+
             let closeDiv = '</div>';
             document.getElementById('suggestionSection').innerHTML += 
-                openDiv + sentence + url + closeDiv;
+                openDiv + from + recommend + sentence + url + closeDiv;
         }
 
         function chooseSuggestionClick(html, chatKey) {
@@ -51,7 +65,27 @@
             sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
         } 
     </script>
-
+    <style>
+        #suggestionSection a {
+            text-decoration: none;
+            color :#2f8fe4;
+        }
+        #suggestionSection .suggestion {
+            border-bottom: 1px solid #444;
+            padding-top:10px;
+        }
+        #suggestionSection .suggestionFrom {
+            color:  color :#2f8fe4;
+        }
+        #suggestionSection .url{
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #suggestionSection b {
+            color: #000;
+        }
+    </style>
     <div id="suggestionSection">
     </div>
 </apex:page>

@@ -2,6 +2,7 @@
     <apex:includeScript value="/support/console/41.0/integration.js"/>
     
     <script type="text/javascript">
+        var timeSend = null;
         const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
         const CHAT_VISITOR = 'Chasitor';
 
@@ -13,6 +14,7 @@
         sforce.console.chat.onChatStarted(chatStartedHandler);
 
         var onNewMessageHandler = function (result, chatKey) {
+            timeSend = performance.now();
             document.getElementById('suggestionSection').innerHTML = '';
             let data = {
                 chatkey: chatKey,
@@ -40,6 +42,7 @@
             json.forEach( (element) => {    
                 createButton(element, chatKey);
             });
+            console.log("Execution time: " + (performance.now() - timeSend).toString());
         }
 
         function createButton(json, chatKey) {

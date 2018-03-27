@@ -13,6 +13,7 @@
         sforce.console.chat.onChatStarted(chatStartedHandler);
 
         var onNewMessageHandler = function (result, chatKey) {
+            document.getElementById('suggestionSection').innerHTML = '';
             let data = {
                 chatkey: chatKey,
                 Querry: result.content

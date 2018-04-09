@@ -20,7 +20,7 @@
         var onNewMessageHandler = function (result, chatKey) {
             timeSend = performance.now();
             document.getElementById('suggestionSection').innerHTML = '';
-            let querry = (result.type == 'Chasitor') ?  result.content : sentMessage.url;
+            let querry = (result.type == 'Chasitor') ?  result.content : sentMessage.url || result.content;
 
             let data = {
                 chatkey: chatKey,

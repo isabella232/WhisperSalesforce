@@ -3,5 +3,5 @@
     <apiVersion>41.0</apiVersion>
     <availableInTouch>false</availableInTouch>
     <confirmationTokenRequired>false</confirmationTokenRequired>
-    <label>ConsoleChat</label>
+    <label>WhisperConsoleDev</label>
 </ApexPage>

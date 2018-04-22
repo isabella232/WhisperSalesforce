@@ -3,13 +3,13 @@
     
     <script type="text/javascript">
         var timeSend = null;
-        const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
-    
+        const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
+
          var messageType = {
             'Chasitor': 0,
             'Agent': 1
         };
-        var sentMessage = {};
+
         var chatStartedHandler = function(result) {
             let chatKey = result.chatKey;
             sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey));       
@@ -20,11 +20,9 @@
         var onNewMessageHandler = function (result, chatKey) {
             timeSend = performance.now();
             document.getElementById('suggestionSection').innerHTML = '';
-            let querry = (result.type == 'Chasitor') ?  result.content : sentMessage.url || result.content;
-
             let data = {
                 chatkey: chatKey,
-                Querry: querry,
+                Query: result.content,
                 type: messageType[result.type]
             };
             let headers = {
@@ -64,16 +62,14 @@
         }
 
         function chooseSuggestionClick(html, chatKey) {
-            sentMessage.sentence = html.getElementsByClassName('sentence')[0].innerText;
-            sentMessage.url = html.getElementsByClassName('url')[0].innerText;   
-            setAgentInput(sentMessage,chatKey);
+            let sentence = html.getElementsByClassName('sentence')[0].innerText;
+            let url = html.getElementsByClassName('url')[0].innerText;
+            setAgentInput(sentence + ' ' + url, chatKey);
         }
 
-        function setAgentInput(sentMessage, chatKey) {
-            let msg = sentMessage.sentence + ' ' + sentMessage.url;
+        function setAgentInput(msg, chatKey) {
             sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
         } 
-
     </script>
     <style>
         body {

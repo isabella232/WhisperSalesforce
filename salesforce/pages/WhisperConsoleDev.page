@@ -16,6 +16,10 @@
         var sentMessage = {};
         var chatStartedHandler = function(result) {
             let chatKey = result.chatKey;
+            fetch( SUGGESTION_ENDPOINT + '?chatkey=' + chatKey)
+                .then(data => data.json())
+                .then(json =>  createAll(json, chatKey))
+                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
             sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey));       
         }
 
@@ -31,11 +35,10 @@
                 Query: querry,
                 type: messageType[result.type]
             };
-
-            fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
+            fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
                 .then(data => data.json())
                 .then(json =>  createAll(json, chatKey))
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error)); 
+                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
         }
 
         function setAgentInputSuccess(result) {

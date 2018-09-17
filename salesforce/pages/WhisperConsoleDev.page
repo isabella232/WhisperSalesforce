@@ -5,6 +5,7 @@
         sforce.console.setCustomConsoleComponentPopoutable(false, null);
         var timeSend = null;
         const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
+        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/selectsuggestion';
         const HEADERS = {
             "Content-Type": "application/json"
         };
@@ -63,7 +64,7 @@
             let html = Array();
             html.push('<div class="sectionHeader">Suggestions</div>');
             json.forEach( (element) => {    
-                html.push('<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">')
+                html.push('<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">', element)
                 html.push('<div class="content">');
                 html.push('<div class="sentence">' + element.title + '</div>');
                 html.push('<a class="sentence url" href="#" onclick="openURL(\'' + element.uri + '\')">' + element.uri + '</a>');
@@ -84,7 +85,16 @@
             document.getElementById('questionSection').innerHTML += html.join("");
         }
 
-        function chooseSuggestionClick(html, chatKey) {
+        function chooseSuggestionClick(html, chatKey, suggestion) {
+			let data = {
+				chatkey: chatKey,
+				Query: suggestion.id,
+				type: messageType['Agent']
+			};
+            fetch(SELECT_SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
+                .then(data => data.json())
+                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+				
             sentMessage.sentence = html.getElementsByClassName('sentence')[0].innerText;
             sentMessage.url = html.getElementsByClassName('url')[0].innerText;   
             setAgentInput(sentMessage,chatKey);

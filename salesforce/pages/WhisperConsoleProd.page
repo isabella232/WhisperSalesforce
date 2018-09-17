@@ -4,6 +4,7 @@
     <script type="text/javascript">
         var timeSend = null;
         const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
+        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/selectsuggestion';
 
          var messageType = {
             'Chasitor': 0,
@@ -49,7 +50,7 @@
         }
 
         function createButton(json, chatKey) {
-            let openDiv = '<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">';
+            let openDiv = '<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\', json)">';
             let openContent = '<div class="content">'
             let from = '<p class="suggestionFrom"><b>From</b> Your assistant Whisper</p>';
             let recommend = '<div><b>I Recommand this answer</b></div>';
@@ -61,7 +62,16 @@
                 openDiv + openContent + from + recommend + sentence + url + closeContent +closeDiv;
         }
 
-        function chooseSuggestionClick(html, chatKey) {
+        function chooseSuggestionClick(html, chatKey, suggestion) {
+			let data = {
+				chatkey: chatKey,
+				Query: suggestion.id,
+				type: messageType['Agent']
+			};
+            fetch(SELECT_SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
+                .then(data => data.json())
+                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+				
             let sentence = html.getElementsByClassName('sentence')[0].innerText;
             let url = html.getElementsByClassName('url')[0].innerText;
             setAgentInput(sentence + ' ' + url, chatKey);

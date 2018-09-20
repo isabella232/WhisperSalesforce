@@ -4,7 +4,7 @@
     <script type="text/javascript">
         var timeSend = null;
         const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
-        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/selectsuggestion';
+        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions/select';
 
          var messageType = {
             'Chasitor': 0,

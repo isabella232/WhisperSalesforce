@@ -5,7 +5,7 @@
         sforce.console.setCustomConsoleComponentPopoutable(false, null);
         var timeSend = null;
         const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
-        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/selectsuggestion';
+        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions/select';
         const HEADERS = {
             "Content-Type": "application/json"
         };

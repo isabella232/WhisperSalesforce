@@ -1,39 +1,173 @@
 <apex:page >
-    <apex:includeScript value="/support/console/41.0/integration.js"/>
-    
-    <script type="text/javascript">
-        var timeSend = null;
-        const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
-        const SELECT_SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions/select';
+    <apex:includeScript value="/support/console/43.0/integration.js"/>
+    <style>
+        body {
+            /* Remove default margin from Console component*/
+            margin: 0px !important;
+            height: 100%;
+        }
+        #whisperHeader {
+            background-color:#4388CC;
+        }
+        #whisperTitle {
+            color:#fff;
+            text-align: center;
+            font-size: 16px;
+            padding: 6px 0;
+            font-weight: bold;
+        }
 
-         var messageType = {
+        .suggestionSection {
+            height: 100%;
+            overflow-y: auto
+        }
+        .suggestionSection a {
+            text-decoration: none;
+            color :#2f8fe4;
+        }
+
+        .suggestionSection a:hover {
+            text-decoration: underline;
+        }
+            
+        .suggestion .content {
+            border-bottom: 1px solid #444;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 14px 0;
+            font-size: 14px;
+        }
+
+        .suggestion .sentence, .suggestion .excerpt{
+            margin-bottom: 8px;
+        }
+
+        .suggestion:hover {
+            cursor: pointer;
+            background-color: #eee;
+        }
+        .suggestionSection .suggestion { 
+            padding: 0 15px;
+        }
+
+        .sectionHeader {
+          background-color: #DDD;
+          padding: 8px 12px;
+          font-weight: bold;
+          font-size: 18px;
+        }
+
+        .questionSection ul li {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        
+    </style>
+    <div id="whisperWrapper">
+        <template id="templateSuggestion">
+            <div class="conversation">
+                <div class="questionSection"></div>
+                <div class="suggestionSection"></div> 
+            </div>
+        </template>
+        <div id="whisperHeader">
+            <div id="whisperTitle">
+                Whisper
+            </div> 
+        </div>
+        <div id="conversations">
+        </div>
+    </div>
+    <script type="text/javascript">
+        var allTabs = {};
+        class ConversationTemplate {
+            constructor(html) {
+                this.html = html;
+                this.questions =  html.getElementsByClassName('questionSection')[0];
+                this.suggestions = html.getElementsByClassName('suggestionSection')[0];
+            }
+            clear() {
+                 this.questions.innerHTML = '';
+                 this.suggestions.innerHTML = '';
+            }
+            refresh() {
+                 document.getElementById('conversations').innerHTML = this.html.outerHTML;
+            }
+        }
+
+        sforce.console.setCustomConsoleComponentPopoutable(false, null);
+
+        var timeSend = null;
+        const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
+        const HEADERS = {
+            "Content-Type": "application/json"
+        };
+
+        var messageType = {
             'Chasitor': 0,
             'Agent': 1
         };
 
+        var sentMessage = {};
         var chatStartedHandler = function(result) {
             let chatKey = result.chatKey;
-            sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey));       
+            let newInstanceTemplate = addNewInstance();
+            addNewTab(result, newInstanceTemplate);
+
+            /*
+            fetch( SUGGESTION_ENDPOINT + '?chatkey=' + chatKey)
+                .then(data => data.json())
+                .then(json =>  createAll(json, chatKey))
+                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+                */
+            sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey,newInstanceTemplate));       
+        }
+
+        var changeWhisperTab = function(result) {
+            changeConversationContext(result.id);
         }
 
         sforce.console.chat.onChatStarted(chatStartedHandler);
+        sforce.console.onFocusedPrimaryTab (changeWhisperTab)
 
-        var onNewMessageHandler = function (result, chatKey) {
+        var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
             timeSend = performance.now();
-            document.getElementById('suggestionSection').innerHTML = '';
+            newInstanceTemplate.clear();
+
+            let query = (result.type == 'Chasitor') ?  result.content : sentMessage.url || result.content;
+
             let data = {
                 chatkey: chatKey,
-                Query: result.content,
+                Query: query,
                 type: messageType[result.type]
             };
-            let headers = {
-                "Content-Type": "application/json"
-            };
-            fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: headers })
+
+            fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
                 .then(data => data.json())
-                .then(json =>  createAllButtons(json, chatKey))
+                .then(json =>  createAll(json, chatKey, newInstanceTemplate))
                 .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
-            
+        }
+
+        function addNewInstance() {
+            let templateSuggestion = document.getElementById("templateSuggestion");
+            var templateAsHTML = templateSuggestion.content.cloneNode(true).firstElementChild;
+            var template = new ConversationTemplate(templateAsHTML);
+            template.refresh();
+            return template;
+        }
+
+        function addNewTab(result, instance) {
+            sforce.console.chat.getDetailsByChatKey(result.chatKey, (details) => {
+                if(details.primaryTabId == null) {
+                    setTimeout(function() {
+                        addNewTab(result, instance)
+                    },500);
+                }
+                else {
+                    allTabs[details.primaryTabId] = instance
+                }   
+            }); 
         }
 
         function setAgentInputSuccess(result) {
@@ -42,94 +176,65 @@
             } 
         }
 
-        function createAllButtons(json, chatKey) {
-            json.forEach( (element) => {    
-                createButton(element, chatKey);
-            });
+        function createAll(json, chatKey, template) {
+            if (json.questions && json.question.length > 0) {
+                createQuestions(json.questions, template);
+            }
+            if (json.suggestedDocuments && json.suggestedDocuments.length > 0){
+                createSuggestions(json.suggestedDocuments, chatKey, template);
+            }
+
             console.log("Execution time: " + (performance.now() - timeSend).toString());
+            template.refresh();
+            sforce.console.setCustomConsoleComponentVisible(true);
         }
 
-        function createButton(json, chatKey) {
-            let openDiv = '<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\', json)">';
-            let openContent = '<div class="content">'
-            let from = '<p class="suggestionFrom"><b>From</b> Your assistant Whisper</p>';
-            let recommend = '<div><b>I Recommand this answer</b></div>';
-            let sentence = '<div class="sentence">' + json.title + '</div>';
-            let url = '<a class="url" href="' + json.uri + '">' + json.uri + '</a>';
-            let closeContent = '</div>';
-            let closeDiv = '</div>';
-            document.getElementById('suggestionSection').innerHTML += 
-                openDiv + openContent + from + recommend + sentence + url + closeContent +closeDiv;
+        function createSuggestions(json, chatKey, template) {
+            let html = Array();
+            html.push('<div class="sectionHeader">Suggestions</div>');
+            json.forEach( (element) => {
+                let excerpt =  element.excerpt || '';    
+                html.push('<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">')
+                html.push('<div class="content">');
+                html.push('<div class="sentence">' + element.title + '</div>');
+                html.push('<div class="excerpt">' + excerpt + '</div>');
+                html.push('<a class="sentence url" href="#" onclick="openURL(\'' + element.uri + '\')">' + element.uri + '</a>');
+                html.push('</div>');
+                html.push('</div>');
+            });
+            template.suggestions.innerHTML += html.join("");
         }
 
-        function chooseSuggestionClick(html, chatKey, suggestion) {
-			let data = {
-				chatkey: chatKey,
-				Query: suggestion.id,
-				type: messageType['Agent']
-			};
-            fetch(SELECT_SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
-                .then(data => data.json())
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
-				
-            let sentence = html.getElementsByClassName('sentence')[0].innerText;
-            let url = html.getElementsByClassName('url')[0].innerText;
-            setAgentInput(sentence + ' ' + url, chatKey);
+        function createQuestions(json, chatKey, template) {
+            let html = Array();
+            html.push('<div class="sectionHeader">Questions</div>');
+            html.push('<ul>');
+            json.forEach( (element) => {      
+                html.push('<li>' + element + '</li>');
+            });
+            html.push('</ul>');
+            template.questions.innerHTML += html.join("");
         }
 
-        function setAgentInput(msg, chatKey) {
+        function chooseSuggestionClick(html, chatKey) {
+            sentMessage.sentence = html.getElementsByClassName('sentence')[0].innerText;
+            sentMessage.url = html.getElementsByClassName('url')[0].innerText;   
+            setAgentInput(sentMessage,chatKey);
+        }
+
+        function changeConversationContext(tabId) {
+            let conversations = allTabs[tabId];
+            if(conversations)
+                conversations.refresh();
+        }
+        
+        function setAgentInput(sentMessage, chatKey) {
+            let msg = sentMessage.sentence + ' ' + sentMessage.url;
             sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
         } 
+
+        function openURL(url) {
+            window.open(url, '_blank');
+        }     
     </script>
-    <style>
-        body {
-            margin: 0px !important;
-        }
-        #whisperHeader {
-            background-color:#4388CC;
-        }
-        #whisperTitle {
-            color:#fff;
-            text-align: center;
-            font-size: 1.2em;
-            padding: 6px 0;
-            font-weight: bold;
-        }
-        #suggestionSection a {
-            text-decoration: none;
-            color :#2f8fe4;
-        }
-        .suggestion .content {
-            padding-bottom: 8px;
-            border-bottom: 1px solid #444;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .suggestion .sentence {
-            margin-bottom: 8px;
-        }
-        .suggestion:hover {
-            cursor: pointer;
-            background-color: #eee;
-        }
-        #suggestionSection .suggestion { 
-            padding: 0 15px;
-        }
-        #suggestionSection .suggestionFrom:not(b) {
-            color: #2f8fe4;
-        }
-        #suggestionSection b {
-            color: #000;
-        }
-    </style>
-    <div id="whisperWrapper">
-        <div id="whisperHeader">
-            <div id="whisperTitle">
-                Whisper
-            </div> 
-        </div>
-        <div id="suggestionSection">
-        </div>
-    </div>
 </apex:page>

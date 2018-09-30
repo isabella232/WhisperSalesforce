@@ -92,7 +92,7 @@
                  this.suggestions.innerHTML = '';
             }
             refresh() {
-                 document.getElementById('conversations').innerHTML = this.html.outerHTML;
+                 document.getElementById('conversations').innerHTML = this.html.outerHTML || '';
             }
         }
 
@@ -158,16 +158,7 @@
         }
 
         function addNewTab(result, instance) {
-            sforce.console.chat.getDetailsByChatKey(result.chatKey, (details) => {
-                if(details.primaryTabId == null) {
-                    setTimeout(function() {
-                        addNewTab(result, instance)
-                    },500);
-                }
-                else {
-                    allTabs[details.primaryTabId] = instance
-                }   
-            }); 
+             allTabs[result.chatKey] = instance
         }
 
         function setAgentInputSuccess(result) {
@@ -223,9 +214,12 @@
         }
 
         function changeConversationContext(tabId) {
-            let conversations = allTabs[tabId];
-            if(conversations)
-                conversations.refresh();
+            sforce.console.chat.getDetailsByPrimaryTabId(tabId, result => {
+                if (result.details) {
+                    let conversations = allTabs[result.details.chatKey];
+                    conversations.refresh();
+                }
+            });
         }
         
         function setAgentInput(sentMessage, chatKey) {

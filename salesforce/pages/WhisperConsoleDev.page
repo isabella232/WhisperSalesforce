@@ -113,14 +113,12 @@
         var chatStartedHandler = function(result) {
             let chatKey = result.chatKey;
             let newInstanceTemplate = addNewInstance();
-            addNewTab(result, newInstanceTemplate);
-
-            /*
+            addNewTab(result, newInstanceTemplate);    
+            
             fetch( SUGGESTION_ENDPOINT + '?chatkey=' + chatKey)
                 .then(data => data.json())
-                .then(json =>  createAll(json, chatKey))
+                .then(json =>  createAll(json, chatKey,newInstanceTemplate))
                 .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
-                */
             sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey,newInstanceTemplate));       
         }
 
@@ -207,7 +205,15 @@
             template.questions.innerHTML += html.join("");
         }
 
-        function chooseSuggestionClick(html, chatKey) {
+        function chooseSuggestionClick(html, chatKey, suggestion) {
+			let data = {
+				chatkey: chatKey,
+				id: suggestion.id
+			};
+            fetch(SUGGESTION_ENDPOINT + '/select', { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
+                .then(data => data.json())
+                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+				
             sentMessage.sentence = html.getElementsByClassName('sentence')[0].innerText;
             sentMessage.url = html.getElementsByClassName('url')[0].innerText;   
             setAgentInput(sentMessage,chatKey);

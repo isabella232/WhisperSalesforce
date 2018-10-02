@@ -150,6 +150,10 @@
                 .then(data => data.json())
                 .then(json =>  createAll(json, chatKey, newInstanceTemplate))
                 .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+
+            sforce.console.chat.getDetailsByChatKey(chatKey, result => {
+                sforce.console.focusPrimaryTabById(result.primaryTabId, null);
+            });    
         }
 
         function addNewInstance() {

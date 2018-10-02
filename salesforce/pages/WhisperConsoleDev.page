@@ -17,6 +17,11 @@
             font-weight: bold;
         }
 
+        #conversations {
+            height: -webkit-fill-available;
+            overflow-y: auto;
+        }
+
         .suggestionSection {
             height: 100%;
             overflow-y: auto
@@ -43,7 +48,7 @@
             margin-bottom: 8px;
         }
 
-        .suggestion:hover {
+        .suggestion:hover, .questionSection ul li:hover {
             cursor: pointer;
             background-color: #eee;
         }
@@ -199,9 +204,11 @@
             let html = Array();
             html.push('<div class="sectionHeader">Questions</div>');
             html.push('<ul>');
-            json.forEach( (element) => {    
-                html.push('<li onclick="chooseSuggestionClick(\'\', \'' +  chatKey + '\', \'' + element.id + '\')">' + element.text + '</li>');
+
+            json.forEach( (element) => {
+                html.push('<li class="questionLi" onclick="chooseSuggestionClick(\'' + element.text + '\', \'' +  chatKey + '\', \'' + element.id + '\')">' + element.text + '</li>');
             });
+
             html.push('</ul>');
             template.questions.innerHTML += html.join("");
         }

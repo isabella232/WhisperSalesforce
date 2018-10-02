@@ -17,6 +17,11 @@
             font-weight: bold;
         }
 
+        #conversations {
+            height: -webkit-fill-available;
+            overflow-y: auto;
+        }
+
         .suggestionSection {
             height: 100%;
             overflow-y: auto
@@ -43,7 +48,7 @@
             margin-bottom: 8px;
         }
 
-        .suggestion:hover {
+        .suggestion:hover, .questionSection ul li:hover {
             cursor: pointer;
             background-color: #eee;
         }
@@ -166,8 +171,8 @@
         }
 
         function createAll(json, chatKey, template) {
-            if (json.questions && json.question.length > 0) {
-                createQuestions(json.questions, template);
+            if (json.questions && json.questions.length > 0) {
+                createQuestions(json.questions, chatKey, template);
             }
             if (json.suggestedDocuments && json.suggestedDocuments.length > 0){
                 createSuggestions(json.suggestedDocuments, chatKey, template);
@@ -182,8 +187,9 @@
             let html = Array();
             html.push('<div class="sectionHeader">Suggestions</div>');
             json.forEach( (element) => {
-                let excerpt =  element.excerpt || '';    
-                html.push('<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">')
+                let excerpt =  element.excerpt || '';   
+                let agentInput =  element.title + ' ' + element.uri;
+                html.push('<div class="suggestion" onclick="chooseSuggestionClick(\'' + agentInput + '\', \'' +  chatKey + '\', \'' + element.id + '\')">');
                 html.push('<div class="content">');
                 html.push('<div class="sentence">' + element.title + '</div>');
                 html.push('<div class="excerpt">' + excerpt + '</div>');
@@ -198,25 +204,23 @@
             let html = Array();
             html.push('<div class="sectionHeader">Questions</div>');
             html.push('<ul>');
-            json.forEach( (element) => {      
-                html.push('<li>' + element + '</li>');
+
+            json.forEach( (element) => {
+                html.push('<li class="questionLi" onclick="chooseSuggestionClick(\'' + element.text + '\', \'' +  chatKey + '\', \'' + element.id + '\')">' + element.text + '</li>');
             });
+
             html.push('</ul>');
             template.questions.innerHTML += html.join("");
         }
 
-        function chooseSuggestionClick(html, chatKey, suggestion) {
+        function chooseSuggestionClick(agentInput, chatKey, suggestionId) {
 			let data = {
 				chatkey: chatKey,
-				id: suggestion.id
+				id: suggestionId
 			};
             fetch(SUGGESTION_ENDPOINT + '/select', { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
-                .then(data => data.json())
                 .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
-				
-            sentMessage.sentence = html.getElementsByClassName('sentence')[0].innerText;
-            sentMessage.url = html.getElementsByClassName('url')[0].innerText;   
-            setAgentInput(sentMessage,chatKey);
+            sforce.console.chat.setAgentInput(chatKey, agentInput, setAgentInputSuccess);
         }
 
         function changeConversationContext(tabId) {
@@ -227,11 +231,6 @@
                 }
             });
         }
-        
-        function setAgentInput(sentMessage, chatKey) {
-            let msg = sentMessage.sentence + ' ' + sentMessage.url;
-            sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
-        } 
 
         function openURL(url) {
             window.open(url, '_blank');

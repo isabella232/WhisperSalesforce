@@ -1,5 +1,6 @@
 <apex:page >
     <apex:includeScript value="/support/console/43.0/integration.js"/>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous"></link>
     <style>
         body {
             /* Remove default margin from Console component*/
@@ -44,9 +45,11 @@
         }
         .facetSection {
             padding: 7px;
+            box-shadow: inset 0 -10px 10px -10px #DDD;
+            border-bottom: 1px solid #DDD;
         }
 
-        .facet {
+        .allFacet {
             color: #009DDC;
         }
 
@@ -63,19 +66,22 @@
             font-weight: bold;
         }
         .suggestion .content {
-            border-bottom: 1px solid #444;
+            border-bottom: 1px solid #CCC;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             padding: 14px 0;
             font-size: 14px;
         }
-
-        .suggestion .sentence, .suggestion .excerpt{
+        .suggestion .title {
+            font-weight: bold;
+            color: #333;
+        }
+        .suggestion .sentence, .suggestion .excerpt{ 
             margin-bottom: 8px;
         }
 
-        .suggestion:hover, .questionSection ul li:hover {
+        .suggestion:hover, .questionSection .question:hover {
             cursor: pointer;
             background-color: #eee;
         }
@@ -89,12 +95,35 @@
           font-weight: bold;
           font-size: 18px;
         }
-
-        .questionSection ul li {
-            margin: 5px 0;
-            font-size: 16px;
+        .questionSection {
+            border-bottom: 3px solid #FFF;
         }
-        
+        .questionSection .questionRow {
+            font-size: 16px;
+            padding: 7px 0;
+            border-bottom: 1px solid #CCC;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .questionSection .question:last-child .questionRow{
+            border:0;
+        }
+        .questionSection .question {
+            padding: 0 15px;
+        }
+
+        .visibiliteArrow,.visibiliteArrow:hover  {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .fa-times {
+            margin: 0 5px;
+            font-size: 12px;
+            color: #666;
+        }
+
     </style>
     <div id="whisperWrapper">
         <template id="templateSuggestion">
@@ -148,6 +177,9 @@
         const HEADERS = {
             "Content-Type": "application/json"
         };
+
+        const COLLAPSE_ICON = "fa-angle-down";
+        const EXPAND_ICON = "fa-angle-up";
 
         var messageType = {
             'Chasitor': 0,
@@ -225,7 +257,9 @@
                 createSuggestions(json.suggestedDocuments, chatKey, template);
             } 
             else if (json.activeFacets && json.activeFacets.length > 0) {
-                displayEmptySuggestion();
+                //TODO 
+                //displayEmptySuggestion();
+                template.suggestions.innerHTML += `<div style="margin:0 auto;width:400px"><h3>There is no suggestion with current filter</h3><p>Try to reduce active filter</p></div>`;
             }
 
             if (json.activeFacets && json.activeFacets.length > 0) {
@@ -239,44 +273,49 @@
 
         function createSuggestions(json, chatKey, template) {
             let html = Array();
-            html.push('<div class="sectionHeader">Suggestions</div>');
+            html.push(`<div class="sectionHeader">Suggestions<i onclick="changeVisibilityClick(this,true)" class="visibiliteArrow fas ${COLLAPSE_ICON}"></i></div>`);
+            html.push('<div class="allSuggestions">');
             json.forEach( (element) => {
                 let excerpt =  element.excerpt || '';   
                 let agentInput =  element.title + ' ' + element.uri;
                 html.push(`<div class="suggestion" onclick="chooseSuggestionClick('${agentInput}','${chatKey}','${element.id}')">`);
                 html.push('<div class="content">');
-                html.push(`<div class="sentence">${element.title}</div>`);
+                html.push(`<div class="title sentence">${element.title}</div>`);
                 html.push(`<div class="excerpt">${excerpt}</div>`);
                 html.push(`<a class="sentence url" href="#" onclick="openURL('${element.uri}')">${element.uri}</a>`);
                 html.push('</div>');
                 html.push('</div>');
             });
+
+            html.push('</div>');
             template.suggestions.innerHTML += html.join("");
         }
 
         function createQuestions(json, chatKey, template) {
             let html = Array();
-            html.push('<div class="sectionHeader">Questions</div>');
-            html.push('<ul>');
-
+            html.push(`<div class="sectionHeader">Questions<i onclick="changeVisibilityClick(this,false)" class="visibiliteArrow fas ${COLLAPSE_ICON}"></i></div>`);
+            html.push('<div class="allQuestions">');
             json.forEach( (element) => {
-                html.push(`<li class="questionLi" onclick="chooseSuggestionClick('${element.text}','${chatKey}','${element.id}')">${element.text}</li>`);
+                html.push('<div class="question">');
+                html.push(`<div class="questionRow" onclick="chooseSuggestionClick('${element.text}','${chatKey}','${element.id}')">${element.text}</div>`);
+                html.push('</div>');
             });
-
-            html.push('</ul>');
+            html.push('</div>');
             template.questions.innerHTML += html.join("");
         }
         
         function createFacets(json, chatKey, template) {
             let html = Array();
             html.push('<span class="filterHeader">Filters</span>');
-            html.push('<span class="facet">');
+            html.push('<span class="allFacet">');
             json.forEach( element => {
+                html.push(`<span class="facet">`);
                 html.push('<span style="color:black;"> | </span>');
                 html.push(`<span>${element.name}: </span><span onclick="facetCancelClick('${chatKey}','${element.id}')">${element.value}</span>`);
+                html.push(`<i class="fas fa-times"></i></span>`);
             });
             html.push('</span>');
-            html.push(`<span class="clearButton" onclick="facetCancelClick('${chatKey}',null)">Clear All</span>`);
+            html.push(`<span class="clearButton" onclick="facetCancelClick('${chatKey}',null)"><i class="fas fa-times"></i>Clear All</span>`);
             template.facets.innerHTML +=  html.join("");
         }
 
@@ -303,6 +342,26 @@
             sforce.console.chat.setAgentInput(chatKey, agentInput, setAgentInputSuccess);
         }
 
+        function changeVisibilityClick(element,isSuggestion) {
+            let classList = element.classList;
+            // TODO Find a better solution that is more dynamic
+            let elementToHandle = element.parentElement.nextSibling;
+
+            if (classList.contains(COLLAPSE_ICON)) {
+                classList.remove(COLLAPSE_ICON);
+                classList.add(EXPAND_ICON);
+                elementToHandle.style.display = "none";
+            } 
+            else if (classList.contains(EXPAND_ICON)) {
+                classList.remove(EXPAND_ICON);
+                classList.add(COLLAPSE_ICON);
+                elementToHandle.style.display = "initial";
+            }
+        }
+
+        function changeIconVisibility(classList){
+
+        }
         function changeConversationContext(tabId) {
             sforce.console.chat.getDetailsByPrimaryTabId(tabId, result => {
                 if (result.details) {

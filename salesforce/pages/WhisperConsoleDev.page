@@ -6,9 +6,11 @@
             margin: 0px !important;
             height: 100%;
         }
+
         #whisperHeader {
             background-color:#4388CC;
         }
+
         #whisperTitle {
             color:#fff;
             text-align: center;
@@ -18,8 +20,14 @@
         }
 
         #conversations {
-            height: -webkit-fill-available;
+            height: -moz-available;         
+            height: -webkit-fill-available; 
+            height: fill-available;
             overflow-y: auto;
+        }
+
+        #facets {
+            font-size: 15px;
         }
 
         .suggestionSection {
@@ -34,7 +42,26 @@
         .suggestionSection a:hover {
             text-decoration: underline;
         }
-            
+        .facetSection {
+            padding: 7px;
+        }
+
+        .facet {
+            color: #009DDC;
+        }
+
+        .clearButton {
+            color: #009DDC;
+            float: right;
+        }
+        .clearButton:hover, .facet:hover {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .filterHeader {
+            font-weight: bold;
+        }
         .suggestion .content {
             border-bottom: 1px solid #444;
             white-space: nowrap;
@@ -76,10 +103,17 @@
                 <div class="suggestionSection"></div> 
             </div>
         </template>
+        <template id="templateFacet">
+            <div class="facets">
+                <div class="facetSection"></div>
+            </div>
+        </template>
         <div id="whisperHeader">
             <div id="whisperTitle">
                 Whisper
             </div> 
+        </div>
+        <div id="facets">
         </div>
         <div id="conversations">
         </div>
@@ -87,17 +121,23 @@
     <script type="text/javascript">
         var allTabs = {};
         class ConversationTemplate {
-            constructor(html) {
-                this.html = html;
-                this.questions =  html.getElementsByClassName('questionSection')[0];
-                this.suggestions = html.getElementsByClassName('suggestionSection')[0];
+            constructor(suggestionHtml, filterHtml) {
+                this.suggestionHtml = suggestionHtml;
+                this.questions =  suggestionHtml.getElementsByClassName('questionSection')[0];
+                this.suggestions = suggestionHtml.getElementsByClassName('suggestionSection')[0];
+                this.facets = filterHtml.getElementsByClassName('facetSection')[0];
+                this.filterHtml = filterHtml;
             }
+
             clear() {
-                 this.questions.innerHTML = '';
-                 this.suggestions.innerHTML = '';
+                this.questions.innerHTML = '';
+                this.suggestions.innerHTML = '';
+                this.facets.innerHTML = '';
             }
+
             refresh() {
-                 document.getElementById('conversations').innerHTML = this.html.outerHTML || '';
+                 document.getElementById('conversations').innerHTML = this.suggestionHtml.outerHTML || '';
+                 document.getElementById('facets').innerHTML = this.filterHtml.outerHTML || '';
             }
         }
 
@@ -120,10 +160,10 @@
             let newInstanceTemplate = addNewInstance();
             addNewTab(result, newInstanceTemplate);    
             
-            fetch( SUGGESTION_ENDPOINT + '?chatkey=' + chatKey)
+            fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}`)
                 .then(data => data.json())
                 .then(json =>  createAll(json, chatKey,newInstanceTemplate))
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+                .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
             sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey,newInstanceTemplate));       
         }
 
@@ -149,7 +189,7 @@
             fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
                 .then(data => data.json())
                 .then(json =>  createAll(json, chatKey, newInstanceTemplate))
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+                .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
 
             sforce.console.chat.getDetailsByChatKey(chatKey, result => {
                 sforce.console.focusPrimaryTabById(result.primaryTabId, null);
@@ -157,9 +197,11 @@
         }
 
         function addNewInstance() {
-            let templateSuggestion = document.getElementById("templateSuggestion");
-            var templateAsHTML = templateSuggestion.content.cloneNode(true).firstElementChild;
-            var template = new ConversationTemplate(templateAsHTML);
+            let templateSuggestion = document.getElementById('templateSuggestion');
+            let templateAsHTML = templateSuggestion.content.cloneNode(true).firstElementChild;
+            let templateFacet = document.getElementById('templateFacet');
+            let templateFacetAsHtml = templateFacet.content.cloneNode(true).firstElementChild;
+            let template = new ConversationTemplate(templateAsHTML,templateFacetAsHtml);
             template.refresh();
             return template;
         }
@@ -178,11 +220,19 @@
             if (json.questions && json.questions.length > 0) {
                 createQuestions(json.questions, chatKey, template);
             }
+
             if (json.suggestedDocuments && json.suggestedDocuments.length > 0){
                 createSuggestions(json.suggestedDocuments, chatKey, template);
+            } 
+            else if (json.activeFacets && json.activeFacets.length > 0) {
+                displayEmptySuggestion();
             }
 
-            console.log("Execution time: " + (performance.now() - timeSend).toString());
+            if (json.activeFacets && json.activeFacets.length > 0) {
+                createFacets(json.activeFacets, chatKey,template);
+            }
+
+            console.log(`Execution time: ${(performance.now() - timeSend).toString()}`);
             template.refresh();
             sforce.console.setCustomConsoleComponentVisible(true);
         }
@@ -193,11 +243,11 @@
             json.forEach( (element) => {
                 let excerpt =  element.excerpt || '';   
                 let agentInput =  element.title + ' ' + element.uri;
-                html.push('<div class="suggestion" onclick="chooseSuggestionClick(\'' + agentInput + '\', \'' +  chatKey + '\', \'' + element.id + '\')">');
+                html.push(`<div class="suggestion" onclick="chooseSuggestionClick('${agentInput}','${chatKey}','${element.id}')">`);
                 html.push('<div class="content">');
-                html.push('<div class="sentence">' + element.title + '</div>');
-                html.push('<div class="excerpt">' + excerpt + '</div>');
-                html.push('<a class="sentence url" href="#" onclick="openURL(\'' + element.uri + '\')">' + element.uri + '</a>');
+                html.push(`<div class="sentence">${element.title}</div>`);
+                html.push(`<div class="excerpt">${excerpt}</div>`);
+                html.push(`<a class="sentence url" href="#" onclick="openURL('${element.uri}')">${element.uri}</a>`);
                 html.push('</div>');
                 html.push('</div>');
             });
@@ -210,20 +260,46 @@
             html.push('<ul>');
 
             json.forEach( (element) => {
-                html.push('<li class="questionLi" onclick="chooseSuggestionClick(\'' + element.text + '\', \'' +  chatKey + '\', \'' + element.id + '\')">' + element.text + '</li>');
+                html.push(`<li class="questionLi" onclick="chooseSuggestionClick('${element.text}','${chatKey}','${element.id}')">${element.text}</li>`);
             });
 
             html.push('</ul>');
             template.questions.innerHTML += html.join("");
         }
+        
+        function createFacets(json, chatKey, template) {
+            let html = Array();
+            html.push('<span class="filterHeader">Filters</span>');
+            html.push('<span class="facet">');
+            json.forEach( element => {
+                html.push('<span style="color:black;"> | </span>');
+                html.push(`<span>${element.name}: </span><span onclick="facetCancelClick('${chatKey}','${element.id}')">${element.value}</span>`);
+            });
+            html.push('</span>');
+            html.push(`<span class="clearButton" onclick="facetCancelClick('${chatKey}',null)">Clear All</span>`);
+            template.facets.innerHTML +=  html.join("");
+        }
+
+        function facetCancelClick(chatKey, facetId) {
+            let template = allTabs[chatKey];
+            template.clear();
+            let data = {
+                chatkey: chatKey
+            };
+
+            fetch(`${SUGGESTION_ENDPOINT}/facets/${facetId || ''}`, { method: "DELETE", body: JSON.stringify(data),  headers: HEADERS })
+                .then(data => data.json())
+                .then(json =>  createAll(json, chatKey, template))
+                .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+        }
 
         function chooseSuggestionClick(agentInput, chatKey, suggestionId) {
-			let data = {
-				chatkey: chatKey,
-				id: suggestionId
-			};
-            fetch(SUGGESTION_ENDPOINT + '/select', { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+            let data = {
+                chatkey: chatKey,
+                id: suggestionId
+            };
+            fetch(`${SUGGESTION_ENDPOINT}/select`, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
+                .catch( error =>   console.log(`Invalid URL, there is no response. Error:  ${error}`));
             sforce.console.chat.setAgentInput(chatKey, agentInput, setAgentInputSuccess);
         }
 

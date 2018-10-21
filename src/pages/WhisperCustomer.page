@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<apex:page >
 <html>
     <head>
         <script type='text/javascript' src='https://c.la1-c1-ord.salesforceliveagent.com/content/g/js/42.0/deployment.js'></script>
@@ -28,3 +28,4 @@
         </div>   
     </body>
 </html>
+</apex:page>

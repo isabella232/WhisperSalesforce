@@ -1,2 +1,5 @@
-server/node_modules/*
-.vscode/settings.json
+.forceCode/*
+.sfdx/*
+force.json
+sfdx-project.json
+.vscode/*

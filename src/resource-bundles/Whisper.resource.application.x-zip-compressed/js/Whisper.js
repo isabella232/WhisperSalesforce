@@ -1,22 +1,46 @@
 var allTabs = {};
 class ConversationTemplate {
-    constructor(suggestionHtml, filterHtml) {
-        this.suggestionHtml = suggestionHtml;
-        this.questions =  suggestionHtml.getElementsByClassName('questionSection')[0];
-        this.suggestions = suggestionHtml.getElementsByClassName('suggestionSection')[0];
-        this.facets = filterHtml.getElementsByClassName('facetSection')[0];
-        this.filterHtml = filterHtml;
+
+    constructor(suggestionTemplate, questionTemplate, facetTemplate) {
+        this.questions =  questionTemplate;
+        this.suggestions = suggestionTemplate;
+        this.facets = facetTemplate;
+    }
+
+    setQuestionContext(questionContext) {
+        this.questionContext = questionContext;
+    }
+
+    setSuggestionContext(suggestionContext) {
+        this.suggestionContext = suggestionContext;
+    }
+    
+    setFacetContext(facetContext) {
+        this.facetContext = facetContext;
     }
 
     clear() {
-        this.questions.innerHTML = '';
-        this.suggestions.innerHTML = '';
-        this.facets.innerHTML = '';
+        this.questionContext = null;
+        this.suggestionContext = null;
+        this.facetContext = null;
+        document.getElementById('conversations').innerHTML = '';
+        document.getElementById('facets').innerHTML = '';
     }
 
     refresh() {
-            document.getElementById('conversations').innerHTML = this.suggestionHtml.outerHTML || '';
-            document.getElementById('facets').innerHTML = this.filterHtml.outerHTML || '';
+        let suggestionHtml = '';
+        let questionHtml = '';
+        let facetHtml = '';
+
+        if (this.suggestionContext)
+            suggestionHtml = this.suggestions(this.suggestionContext);
+        if (this.questionContext)
+            questionHtml = this.questions(this.questionContext);
+        if (this.facetContext)
+            facetHtml = this.facets(this.facetContext);
+
+        document.getElementById('conversations').innerHTML = questionHtml + suggestionHtml  ;
+        document.getElementById('facets').innerHTML = facetHtml;
     }
 }
 
@@ -79,92 +103,49 @@ var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
 }
 
 function addNewInstance() {
-    let templateSuggestion = document.getElementById('templateSuggestion');
-    let templateAsHTML = templateSuggestion.content.cloneNode(true).firstElementChild;
-    let templateFacet = document.getElementById('templateFacet');
-    let templateFacetAsHtml = templateFacet.content.cloneNode(true).firstElementChild;
-    let template = new ConversationTemplate(templateAsHTML,templateFacetAsHtml);
+    let sourceSuggestion   = document.getElementById("suggestion-template").innerHTML;
+    let suggestionTemplate = Handlebars.compile(sourceSuggestion);
+    let sourceQuestion   = document.getElementById("question-template").innerHTML;
+    let questionTemplate = Handlebars.compile(sourceQuestion);
+    let sourceFacet  = document.getElementById("facet-template").innerHTML;
+    let facetTemplate = Handlebars.compile(sourceFacet);
+    let template = new ConversationTemplate(suggestionTemplate,questionTemplate,facetTemplate);
     template.refresh();
     return template;
 }
 
 function addNewTab(result, instance) {
-        allTabs[result.chatKey] = instance
-}
-
-function setAgentInputSuccess(result) {
-    if (!result.success) {
-        console.log(result)
-    } 
+    allTabs[result.chatKey] = instance
 }
 
 function createAll(json, chatKey, template) {
     if (json.questions && json.questions.length > 0) {
-        createQuestions(json.questions, chatKey, template);
+        let questionContext = {
+            questions: json.questions,
+            chatkey: chatKey,
+        };
+        template.setQuestionContext(questionContext);
     }
 
-    if (json.suggestedDocuments && json.suggestedDocuments.length > 0){
-        createSuggestions(json.suggestedDocuments, chatKey, template);
+    if (json.suggestedDocuments && json.suggestedDocuments.length > 0) {
+        let suggestionContext = {
+            suggestions: json.suggestedDocuments,
+            chatkey: chatKey,
+        };
+        template.setSuggestionContext(suggestionContext);
     } 
-    else if (json.activeFacets && json.activeFacets.length > 0) {
-        template.suggestions.innerHTML += `<div style="margin:0 auto;width:400px"><h3>There is no suggestion with current filter</h3><p>Try to reduce active filter</p></div>`;
-    }
 
     if (json.activeFacets && json.activeFacets.length > 0) {
-        createFacets(json.activeFacets, chatKey,template);
+        let facetContext = {
+            facets: json.activeFacets,
+            chatkey: chatKey,
+        };
+        template.setFacetContext(facetContext);
     }
-
+    
     console.log(`Execution time: ${(performance.now() - timeSend).toString()}`);
     template.refresh();
     sforce.console.setCustomConsoleComponentVisible(true);
-}
-
-function createSuggestions(json, chatKey, template) {
-    let html = Array();
-    html.push(`<div class="sectionHeader">Suggestions<i onclick="changeVisibilityClick(this,true)" class="visibiliteArrow fas ${COLLAPSE_ICON}"></i></div>`);
-    html.push('<div class="allSuggestions">');
-    json.forEach( (element) => {
-        let excerpt =  element.excerpt || '';   
-        let agentInput =  element.title + ' ' + element.uri;
-        html.push(`<div class="suggestion" onclick="chooseSuggestionClick('${agentInput}','${chatKey}','${element.id}','suggestion')">`);
-        html.push('<div class="content">');
-        html.push(`<div class="title sentence">${element.title}</div>`);
-        html.push(`<div class="excerpt">${excerpt}</div>`);
-        html.push(`<a class="sentence url" href="#" onclick="openURL('${element.uri}')">${element.uri}</a>`);
-        html.push('</div>');
-        html.push('</div>');
-    });
-
-    html.push('</div>');
-    template.suggestions.innerHTML += html.join("");
-}
-
-function createQuestions(json, chatKey, template) {
-    let html = Array();
-    html.push(`<div class="sectionHeader">Questions<i onclick="changeVisibilityClick(this,false)" class="visibiliteArrow fas ${COLLAPSE_ICON}"></i></div>`);
-    html.push('<div class="allQuestions">');
-    json.forEach( (element) => {
-        html.push('<div class="question">');
-        html.push(`<div class="questionRow" onclick="chooseSuggestionClick('${element.text}','${chatKey}','${element.id}','question')">${element.text}</div>`);
-        html.push('</div>');
-    });
-    html.push('</div>');
-    template.questions.innerHTML += html.join("");
-}
-
-function createFacets(json, chatKey, template) {
-    let html = Array();
-    html.push('<span class="filterHeader">Filters</span>');
-    html.push('<span class="allFacet">');
-    json.forEach( element => {
-        html.push(`<span class="facet">`);
-        html.push('<span style="color:black;"> | </span>');
-        html.push(`<span>${element.name}: </span><span onclick="facetCancelClick('${chatKey}','${element.id}')">${element.value}</span>`);
-        html.push(`<i class="fas fa-times"></i></span>`);
-    });
-    html.push('</span>');
-    html.push(`<span class="clearButton" onclick="facetCancelClick('${chatKey}',null)"><i class="fas fa-times"></i>Clear All</span>`);
-    template.facets.innerHTML +=  html.join("");
 }
 
 function facetCancelClick(chatKey, facetId) {
@@ -189,13 +170,12 @@ function chooseSuggestionClick(agentInput, chatKey, suggestionId, type) {
     };
     fetch(`${SUGGESTION_ENDPOINT}/select`, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
         .catch( error =>   console.log(`Invalid URL, there is no response. Error:  ${error}`));
-    sforce.console.chat.setAgentInput(chatKey, agentInput, setAgentInputSuccess);
+    sforce.console.chat.setAgentInput(chatKey, agentInput, null);
 }
 
-function changeVisibilityClick(element,isSuggestion) {
+function changeVisibilityClick(element,idToHide) {
     let classList = element.classList;
-    // TODO Find a better solution that is more dynamic
-    let elementToHandle = element.parentElement.nextSibling;
+    let elementToHandle = document.getElementById(idToHide);
 
     if (classList.contains(COLLAPSE_ICON)) {
         classList.remove(COLLAPSE_ICON);
@@ -220,4 +200,4 @@ function changeConversationContext(tabId) {
 
 function openURL(url) {
     window.open(url, '_blank');
-}     
+} 

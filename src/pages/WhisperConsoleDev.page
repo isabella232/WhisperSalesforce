@@ -1,7 +1,51 @@
 <apex:page >
     <apex:includeScript value="/support/console/44.0/integration.js"/>
+    <apex:includeScript value="{!$Resource.handlebarjs}"/>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous"></link>
     <apex:stylesheet value="{!URLFOR($Resource.Whisper, '/css/Whisper.css')}"/>
+
+    <script id="suggestion-template" type="text/x-handlebars-template">
+        <div class="suggestionSection">
+            <div class="sectionHeader">Suggestions<i onclick="changeVisibilityClick(this,'allSuggestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
+            <div id="allSuggestions">
+            {{#each suggestions}}
+                <div class="suggestion" onclick="chooseSuggestionClick('{{title}} {{uri}}','{{../chatkey}}','{{id}}','suggestion')">
+                    <div class="content">
+                        <div class="title sentence">{{title}}</div>
+                        <div class="excerpt">{{excerpt}}</div>
+                        <a class="sentence url" href="#" onclick="openURL('{{uri}}')">{{uri}}</a>
+                    </div>
+                </div>
+            {{/each}}
+            </div>
+        </div>
+    </script>
+    <script id="question-template" type="text/x-handlebars-template">
+        <div class="questionSection">
+            <div class="sectionHeader">Questions<i onclick="changeVisibilityClick(this,'allQuestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
+            <div id="allQuestions">
+            {{#each questions}}
+                <div class="question">
+                    <div class="questionRow" onclick="chooseSuggestionClick('{{text}}','{{../chatkey}}','{{id}}','question')">{{text}}</div>
+                </div> 
+            {{/each}}
+            </div>
+        </div>
+    </script>
+    <script id="facet-template" type="text/x-handlebars-template">
+        <span class="filterHeader">Filters</span>
+        <span class="allFacet">
+        {{#each facets}}
+            <span class="facet">
+                <span style="color:black;"> | </span>
+                <span>{{name}}: </span>
+                <span onclick="facetCancelClick('{{../chatkey}}','{{id}}')">{{value}}</span>
+                <i class="fas fa-times"></i>
+            </span>
+        {{/each}}
+        </span>
+        <span class="clearButton" onclick="facetCancelClick('{{chatkey}}',null)"><i class="fas fa-times"></i>Clear All</span>
+    </script>
     <div id="whisperWrapper">
         <template id="templateSuggestion">
             <div class="conversation">
@@ -26,3 +70,6 @@
     </div>
    <apex:includeScript value="{!URLFOR($Resource.Whisper, '/js/Whisper.js')}"/>
 </apex:page>
+
+
+

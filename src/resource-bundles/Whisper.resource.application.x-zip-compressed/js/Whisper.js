@@ -86,7 +86,9 @@ var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
     let data = {
         chatkey: chatKey,
         Query: query,
-        type: messageType[result.type]
+        type: messageType[result.type],
+        maxDocuments:10,
+        maxQuestions: 5
     };
 
     fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
@@ -100,7 +102,7 @@ var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
 }
 
 function fetchConversation(chatKey,template) {
-    fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}`)
+    fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}&maxDocuments=10&maxQuestions=5`)
         .then(data => data.json())
         .then(json =>  createAll(json, chatKey,template))
         .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));

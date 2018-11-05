@@ -66,10 +66,7 @@ var chatStartedHandler = function(result) {
     let newInstanceTemplate = addNewInstance();
     addNewTab(result, newInstanceTemplate);    
     
-    fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}`)
-        .then(data => data.json())
-        .then(json =>  createAll(json, chatKey,newInstanceTemplate))
-        .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+    fetchConversation(chatKey,newInstanceTemplate)
     sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey,newInstanceTemplate));       
 }
 
@@ -102,6 +99,13 @@ var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
     });    
 }
 
+function fetchConversation(chatKey,template) {
+    fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}`)
+        .then(data => data.json())
+        .then(json =>  createAll(json, chatKey,template))
+        .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+}
+
 function addNewInstance() {
     let sourceSuggestion   = document.getElementById("suggestion-template").innerHTML;
     let suggestionTemplate = Handlebars.compile(sourceSuggestion);
@@ -127,9 +131,9 @@ function createAll(json, chatKey, template) {
         template.setQuestionContext(questionContext);
     }
 
-    if (json.suggestedDocuments && json.suggestedDocuments.length > 0) {
+    if (json.documents && json.documents.length > 0) {
         let suggestionContext = {
-            suggestions: json.suggestedDocuments,
+            suggestions: json.documents,
             chatkey: chatKey,
         };
         template.setSuggestionContext(suggestionContext);
@@ -157,9 +161,9 @@ function facetCancelClick(chatKey, facetId) {
     };
 
     fetch(`${SUGGESTION_ENDPOINT}/facets/${facetId || ''}`, { method: "DELETE", body: JSON.stringify(data),  headers: HEADERS })
-        .then(data => data.json())
-        .then(json =>  createAll(json, chatKey, template))
         .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+    
+    fetchConversation(chatKey, template);
 }
 
 function chooseSuggestionClick(agentInput, chatKey, suggestionId, type) {

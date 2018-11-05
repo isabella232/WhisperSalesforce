@@ -1,20 +1,34 @@
 <apex:page >
     <apex:includeScript value="/support/console/43.0/integration.js"/>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous"></link>
     <style>
         body {
             /* Remove default margin from Console component*/
             margin: 0px !important;
             height: 100%;
         }
+
         #whisperHeader {
             background-color:#4388CC;
         }
+
         #whisperTitle {
             color:#fff;
             text-align: center;
             font-size: 16px;
             padding: 6px 0;
             font-weight: bold;
+        }
+
+        #conversations {
+            height: -moz-available;         
+            height: -webkit-fill-available; 
+            height: fill-available;
+            overflow-y: auto;
+        }
+
+        #facets {
+            font-size: 15px;
         }
 
         .suggestionSection {
@@ -29,21 +43,45 @@
         .suggestionSection a:hover {
             text-decoration: underline;
         }
-            
+        .facetSection {
+            padding: 7px;
+            box-shadow: inset 0 -10px 10px -10px #DDD;
+            border-bottom: 1px solid #DDD;
+        }
+
+        .allFacet {
+            color: #009DDC;
+        }
+
+        .clearButton {
+            color: #009DDC;
+            float: right;
+        }
+        .clearButton:hover, .facet:hover {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .filterHeader {
+            font-weight: bold;
+        }
         .suggestion .content {
-            border-bottom: 1px solid #444;
+            border-bottom: 1px solid #CCC;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             padding: 14px 0;
             font-size: 14px;
         }
-
-        .suggestion .sentence, .suggestion .excerpt{
+        .suggestion .title {
+            font-weight: bold;
+            color: #333;
+        }
+        .suggestion .sentence, .suggestion .excerpt{ 
             margin-bottom: 8px;
         }
 
-        .suggestion:hover {
+        .suggestion:hover, .questionSection .question:hover {
             cursor: pointer;
             background-color: #eee;
         }
@@ -57,12 +95,35 @@
           font-weight: bold;
           font-size: 18px;
         }
-
-        .questionSection ul li {
-            margin: 5px 0;
-            font-size: 16px;
+        .questionSection {
+            border-bottom: 3px solid #FFF;
         }
-        
+        .questionSection .questionRow {
+            font-size: 16px;
+            padding: 7px 0;
+            border-bottom: 1px solid #CCC;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .questionSection .question:last-child .questionRow{
+            border:0;
+        }
+        .questionSection .question {
+            padding: 0 15px;
+        }
+
+        .visibiliteArrow,.visibiliteArrow:hover  {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .fa-times {
+            margin: 0 5px;
+            font-size: 12px;
+            color: #666;
+        }
+
     </style>
     <div id="whisperWrapper">
         <template id="templateSuggestion">
@@ -71,10 +132,17 @@
                 <div class="suggestionSection"></div> 
             </div>
         </template>
+        <template id="templateFacet">
+            <div class="facets">
+                <div class="facetSection"></div>
+            </div>
+        </template>
         <div id="whisperHeader">
             <div id="whisperTitle">
                 Whisper
             </div> 
+        </div>
+        <div id="facets">
         </div>
         <div id="conversations">
         </div>
@@ -82,27 +150,36 @@
     <script type="text/javascript">
         var allTabs = {};
         class ConversationTemplate {
-            constructor(html) {
-                this.html = html;
-                this.questions =  html.getElementsByClassName('questionSection')[0];
-                this.suggestions = html.getElementsByClassName('suggestionSection')[0];
+            constructor(suggestionHtml, filterHtml) {
+                this.suggestionHtml = suggestionHtml;
+                this.questions =  suggestionHtml.getElementsByClassName('questionSection')[0];
+                this.suggestions = suggestionHtml.getElementsByClassName('suggestionSection')[0];
+                this.facets = filterHtml.getElementsByClassName('facetSection')[0];
+                this.filterHtml = filterHtml;
             }
+
             clear() {
-                 this.questions.innerHTML = '';
-                 this.suggestions.innerHTML = '';
+                this.questions.innerHTML = '';
+                this.suggestions.innerHTML = '';
+                this.facets.innerHTML = '';
             }
+
             refresh() {
-                 document.getElementById('conversations').innerHTML = this.html.outerHTML;
+                 document.getElementById('conversations').innerHTML = this.suggestionHtml.outerHTML || '';
+                 document.getElementById('facets').innerHTML = this.filterHtml.outerHTML || '';
             }
         }
 
         sforce.console.setCustomConsoleComponentPopoutable(false, null);
 
         var timeSend = null;
-        const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
+        const SUGGESTION_ENDPOINT = 'https://whisper.us-east-1.elasticbeanstalk.com/whisper/suggestions';
         const HEADERS = {
             "Content-Type": "application/json"
         };
+
+        const COLLAPSE_ICON = "fa-angle-down";
+        const EXPAND_ICON = "fa-angle-up";
 
         var messageType = {
             'Chasitor': 0,
@@ -113,14 +190,12 @@
         var chatStartedHandler = function(result) {
             let chatKey = result.chatKey;
             let newInstanceTemplate = addNewInstance();
-            addNewTab(result, newInstanceTemplate);
-
-            /*
-            fetch( SUGGESTION_ENDPOINT + '?chatkey=' + chatKey)
+            addNewTab(result, newInstanceTemplate);    
+            
+            fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}`)
                 .then(data => data.json())
-                .then(json =>  createAll(json, chatKey))
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
-                */
+                .then(json =>  createAll(json, chatKey,newInstanceTemplate))
+                .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
             sforce.console.chat.onNewMessage(chatKey, (result) => onNewMessageHandler(result, chatKey,newInstanceTemplate));       
         }
 
@@ -146,28 +221,25 @@
             fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
                 .then(data => data.json())
                 .then(json =>  createAll(json, chatKey, newInstanceTemplate))
-                .catch( error =>  console.log('Invalid URL, there is no response. Error: ' + error));
+                .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+
+            sforce.console.chat.getDetailsByChatKey(chatKey, result => {
+                sforce.console.focusPrimaryTabById(result.primaryTabId, null);
+            });    
         }
 
         function addNewInstance() {
-            let templateSuggestion = document.getElementById("templateSuggestion");
-            var templateAsHTML = templateSuggestion.content.cloneNode(true).firstElementChild;
-            var template = new ConversationTemplate(templateAsHTML);
+            let templateSuggestion = document.getElementById('templateSuggestion');
+            let templateAsHTML = templateSuggestion.content.cloneNode(true).firstElementChild;
+            let templateFacet = document.getElementById('templateFacet');
+            let templateFacetAsHtml = templateFacet.content.cloneNode(true).firstElementChild;
+            let template = new ConversationTemplate(templateAsHTML,templateFacetAsHtml);
             template.refresh();
             return template;
         }
 
         function addNewTab(result, instance) {
-            sforce.console.chat.getDetailsByChatKey(result.chatKey, (details) => {
-                if(details.primaryTabId == null) {
-                    setTimeout(function() {
-                        addNewTab(result, instance)
-                    },500);
-                }
-                else {
-                    allTabs[details.primaryTabId] = instance
-                }   
-            }); 
+             allTabs[result.chatKey] = instance
         }
 
         function setAgentInputSuccess(result) {
@@ -177,61 +249,127 @@
         }
 
         function createAll(json, chatKey, template) {
-            if (json.questions && json.question.length > 0) {
-                createQuestions(json.questions, template);
-            }
-            if (json.suggestedDocuments && json.suggestedDocuments.length > 0){
-                createSuggestions(json.suggestedDocuments, chatKey, template);
+            if (json.questions && json.questions.length > 0) {
+                createQuestions(json.questions, chatKey, template);
             }
 
-            console.log("Execution time: " + (performance.now() - timeSend).toString());
+            if (json.suggestedDocuments && json.suggestedDocuments.length > 0){
+                createSuggestions(json.suggestedDocuments, chatKey, template);
+            } 
+            else if (json.activeFacets && json.activeFacets.length > 0) {
+                //TODO 
+                //displayEmptySuggestion();
+                template.suggestions.innerHTML += `<div style="margin:0 auto;width:400px"><h3>There is no suggestion with current filter</h3><p>Try to reduce active filter</p></div>`;
+            }
+
+            if (json.activeFacets && json.activeFacets.length > 0) {
+                createFacets(json.activeFacets, chatKey,template);
+            }
+
+            console.log(`Execution time: ${(performance.now() - timeSend).toString()}`);
             template.refresh();
             sforce.console.setCustomConsoleComponentVisible(true);
         }
 
         function createSuggestions(json, chatKey, template) {
             let html = Array();
-            html.push('<div class="sectionHeader">Suggestions</div>');
+            html.push(`<div class="sectionHeader">Suggestions<i onclick="changeVisibilityClick(this,true)" class="visibiliteArrow fas ${COLLAPSE_ICON}"></i></div>`);
+            html.push('<div class="allSuggestions">');
             json.forEach( (element) => {
-                let excerpt =  element.excerpt || '';    
-                html.push('<div class="suggestion" onclick="chooseSuggestionClick(this, \'' +  chatKey + '\')">')
+                let excerpt =  element.excerpt || '';   
+                let agentInput =  element.title + ' ' + element.uri;
+                html.push(`<div class="suggestion" onclick="chooseSuggestionClick('${agentInput}','${chatKey}','${element.id}')">`);
                 html.push('<div class="content">');
-                html.push('<div class="sentence">' + element.title + '</div>');
-                html.push('<div class="excerpt">' + excerpt + '</div>');
-                html.push('<a class="sentence url" href="#" onclick="openURL(\'' + element.uri + '\')">' + element.uri + '</a>');
+                html.push(`<div class="title sentence">${element.title}</div>`);
+                html.push(`<div class="excerpt">${excerpt}</div>`);
+                html.push(`<a class="sentence url" href="#" onclick="openURL('${element.uri}')">${element.uri}</a>`);
                 html.push('</div>');
                 html.push('</div>');
             });
+
+            html.push('</div>');
             template.suggestions.innerHTML += html.join("");
         }
 
         function createQuestions(json, chatKey, template) {
             let html = Array();
-            html.push('<div class="sectionHeader">Questions</div>');
-            html.push('<ul>');
-            json.forEach( (element) => {      
-                html.push('<li>' + element + '</li>');
+            html.push(`<div class="sectionHeader">Questions<i onclick="changeVisibilityClick(this,false)" class="visibiliteArrow fas ${COLLAPSE_ICON}"></i></div>`);
+            html.push('<div class="allQuestions">');
+            json.forEach( (element) => {
+                html.push('<div class="question">');
+                html.push(`<div class="questionRow" onclick="chooseSuggestionClick('${element.text}','${chatKey}','${element.id}')">${element.text}</div>`);
+                html.push('</div>');
             });
-            html.push('</ul>');
+            html.push('</div>');
             template.questions.innerHTML += html.join("");
         }
-
-        function chooseSuggestionClick(html, chatKey) {
-            sentMessage.sentence = html.getElementsByClassName('sentence')[0].innerText;
-            sentMessage.url = html.getElementsByClassName('url')[0].innerText;   
-            setAgentInput(sentMessage,chatKey);
-        }
-
-        function changeConversationContext(tabId) {
-            let conversations = allTabs[tabId];
-            if(conversations)
-                conversations.refresh();
-        }
         
-        function setAgentInput(sentMessage, chatKey) {
-            let msg = sentMessage.sentence + ' ' + sentMessage.url;
-            sforce.console.chat.setAgentInput(chatKey, msg, setAgentInputSuccess);
-        } 
+        function createFacets(json, chatKey, template) {
+            let html = Array();
+            html.push('<span class="filterHeader">Filters</span>');
+            html.push('<span class="allFacet">');
+            json.forEach( element => {
+                html.push(`<span class="facet">`);
+                html.push('<span style="color:black;"> | </span>');
+                html.push(`<span>${element.name}: </span><span onclick="facetCancelClick('${chatKey}','${element.id}')">${element.value}</span>`);
+                html.push(`<i class="fas fa-times"></i></span>`);
+            });
+            html.push('</span>');
+            html.push(`<span class="clearButton" onclick="facetCancelClick('${chatKey}',null)"><i class="fas fa-times"></i>Clear All</span>`);
+            template.facets.innerHTML +=  html.join("");
+        }
+
+        function facetCancelClick(chatKey, facetId) {
+            let template = allTabs[chatKey];
+            template.clear();
+            let data = {
+                chatkey: chatKey
+            };
+
+            fetch(`${SUGGESTION_ENDPOINT}/facets/${facetId || ''}`, { method: "DELETE", body: JSON.stringify(data),  headers: HEADERS })
+                .then(data => data.json())
+                .then(json =>  createAll(json, chatKey, template))
+                .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+        }
+
+        function chooseSuggestionClick(agentInput, chatKey, suggestionId) {
+            let data = {
+                chatkey: chatKey,
+                id: suggestionId
+            };
+            fetch(`${SUGGESTION_ENDPOINT}/select`, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
+                .catch( error =>   console.log(`Invalid URL, there is no response. Error:  ${error}`));
+            sforce.console.chat.setAgentInput(chatKey, agentInput, setAgentInputSuccess);
+        }
+
+        function changeVisibilityClick(element,isSuggestion) {
+            let classList = element.classList;
+            // TODO Find a better solution that is more dynamic
+            let elementToHandle = element.parentElement.nextSibling;
+
+            if (classList.contains(COLLAPSE_ICON)) {
+                classList.remove(COLLAPSE_ICON);
+                classList.add(EXPAND_ICON);
+                elementToHandle.style.display = "none";
+            } 
+            else if (classList.contains(EXPAND_ICON)) {
+                classList.remove(EXPAND_ICON);
+                classList.add(COLLAPSE_ICON);
+                elementToHandle.style.display = "initial";
+            }
+        }
+
+        function changeIconVisibility(classList){
+
+        }
+        function changeConversationContext(tabId) {
+            sforce.console.chat.getDetailsByPrimaryTabId(tabId, result => {
+                if (result.details) {
+                    let conversations = allTabs[result.details.chatKey];
+                    conversations.refresh();
+                }
+            });
+        }
 
         function openURL(url) {
             window.open(url, '_blank');

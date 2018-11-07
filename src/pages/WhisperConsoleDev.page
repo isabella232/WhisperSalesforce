@@ -3,10 +3,9 @@
     <apex:includeScript value="{!$Resource.handlebarjs}"/>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous"></link>
     <apex:stylesheet value="{!URLFOR($Resource.Whisper, '/css/Whisper.css')}"/>
-
     <script id="suggestion-template" type="text/x-handlebars-template">
         <div class="suggestionSection">
-            <div class="sectionHeader">Suggestions<i onclick="changeVisibilityClick(this,'allSuggestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
+            <div class="sectionHeader">You could suggest<i onclick="changeVisibilityClick(this,'allSuggestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
             <div id="allSuggestions">
             {{#each suggestions}}
                 <div class="suggestion" onclick="chooseSuggestionClick('{{title}} {{uri}}','{{../chatkey}}','{{id}}','suggestion')">
@@ -22,7 +21,7 @@
     </script>
     <script id="question-template" type="text/x-handlebars-template">
         <div class="questionSection">
-            <div class="sectionHeader">Questions<i onclick="changeVisibilityClick(this,'allQuestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
+            <div class="sectionHeader">You could ask<i onclick="changeVisibilityClick(this,'allQuestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
             <div id="allQuestions">
             {{#each questions}}
                 <div class="question">
@@ -33,43 +32,54 @@
         </div>
     </script>
     <script id="facet-template" type="text/x-handlebars-template">
-        <span class="filterHeader">Filters</span>
-        <span class="allFacet">
+        <div class="filterHeader sectionHeader">
+            Filters
+            <span class="clearButton" onclick="facetCancelClick('{{chatkey}}',null)">Clear All</span>
+        </div>
+        <div class="allFacet">
         {{#each facets}}
-            <span class="facet">
-                <span style="color:black;"> | </span>
-                <span>{{name}}: </span>
-                <span onclick="facetCancelClick('{{../chatkey}}','{{id}}')">{{value}}</span>
-                <i class="fas fa-times"></i>
-            </span>
+            <div class="facet">
+                <div class="facetHeader">
+                    <span class="facetName">{{name}}</span>
+                    <span class="clearButton" onclick="facetCancelClick('{{../chatkey}}','{{id}}')">Clear</span>
+                </div>
+                <div class="facetValues">
+                    <input type="checkbox" name="{{name}}" value="{{value}}" checked="checked">
+                    <span class="facetValue">{{value}}</span>
+                </div>
+            </div>
         {{/each}}
-        </span>
-        <span class="clearButton" onclick="facetCancelClick('{{chatkey}}',null)"><i class="fas fa-times"></i>Clear All</span>
+        </div>
+    </script> 
+    <script id="setting-template" type="text/x-handlebars-template">
+        <div class="whisperHeader whisperTitle">Options</div>
+        <div id="settingParameters">
+            <table>
+                <tr>
+                    <td>Max number of suggested documents</td>
+                    <td><input onchange="changeMaxDocuments(this.value)" value="{{maxDocuments}}" type="number" name="maxDocuments" min="0" max="100"></td>
+                </tr>
+                <tr>
+                    <td>Max number of suggested questions</td>
+                    <td><input onchange="changeMaxQuestions(this.value)" value="{{maxQuestions}}" type="number" name="maxQuestions" min="0" max="20"></td>
+                </tr>
+            </table>
+        </div>
     </script>
-    <div id="whisperWrapper">
-        <template id="templateSuggestion">
-            <div class="conversation">
-                <div class="questionSection"></div>
-                <div class="suggestionSection"></div> 
-            </div>
-        </template>
-        <template id="templateFacet">
-            <div class="facets">
-                <div class="facetSection"></div>
-            </div>
-        </template>
-        <div id="whisperHeader">
-            <div id="whisperTitle">
+
+    <div id="whisperWrapper"> 
+        <div class="whisperHeader">
+            <div class="whisperTitle">
                 Whisper
+                <i id="setting" onclick="settingClick()" class="fas fa-cog"></i>
+                <div id="settingSection" style="display:none"></div>
             </div> 
         </div>
-        <div id="facets">
+        <div id="facetsSection">
+            <div id="facets"></div>
         </div>
         <div id="conversations">
         </div>
-    </div>
+    </div> 
    <apex:includeScript value="{!URLFOR($Resource.Whisper, '/js/Whisper.js')}"/>
 </apex:page>
-
-
-

@@ -4,11 +4,11 @@ body {
     height: 100%;
 }
 
-#whisperHeader {
+.whisperHeader {
     background-color:#4388CC;
 }
 
-#whisperTitle {
+.whisperTitle {
     color:#fff;
     text-align: center;
     font-size: 16px;
@@ -21,16 +21,69 @@ body {
     height: -webkit-fill-available; 
     height: fill-available;
     overflow-y: auto;
+    border-left: 1px solid #CCC;
 }
 
-#facets {
+#facetsSection {
+    float:left;
+    width:29.7%;
     font-size: 15px;
 }
 
-.suggestionSection {
-    height: 100%;
-    overflow-y: auto
+#settingSection{
+    position: absolute;
+    right: 25px;
+    top: 20px;
+    background: #FFF;
+    color: #000;
+    font-weight: normal; 
+    text-align: left;
+    border: 1px solid #444;
+    -webkit-box-shadow: 10px 9px 30px -1px rgba(0,0,0,0.66);
+    -moz-box-shadow: 10px 9px 30px -1px rgba(0,0,0,0.66);
+    box-shadow: 10px 9px 30px -1px rgba(0,0,0,0.66);
+    line-height: 1.8;
 }
+
+#settingParameters {
+    padding: 14px 22px;
+}
+
+#settingSection input[type=number] {
+    width:40px;
+}
+
+#setting {
+    float: right;
+    position: relative;
+    right: 12px;
+    color: #DDD;
+}
+
+#setting:hover {
+    cursor: pointer;
+}
+
+.facetHeader {
+    background-color: #53A8E6;
+    padding: 5px 10px;
+    font-size: 17px;
+}
+
+.facetName {
+    color: #111;
+    font-weight: bold;
+}
+
+.facetValues {
+    padding: 8px 16px;
+    font-size: 21px;
+}
+
+.facetValue {
+    margin-left: 12px;
+}
+
 .suggestionSection a {
     text-decoration: none;
     color :#2f8fe4;
@@ -39,27 +92,20 @@ body {
 .suggestionSection a:hover {
     text-decoration: underline;
 }
-.facetSection {
-    padding: 7px;
-    box-shadow: inset 0 -10px 10px -10px #DDD;
-    border-bottom: 1px solid #DDD;
-}
-
-.allFacet {
-    color: #009DDC;
-}
 
 .clearButton {
-    color: #009DDC;
     float: right;
+    color:#FFF;
 }
-.clearButton:hover, .facet:hover {
+
+.clearButton:hover  {
     cursor: pointer;
     text-decoration: underline;
 }
 
 .filterHeader {
     font-weight: bold;
+    border-bottom: 1px solid #FFF;
 }
 .suggestion .content {
     border-bottom: 1px solid #CCC;
@@ -86,11 +132,13 @@ body {
 }
 
 .sectionHeader {
-  background-color: #DDD;
+  background-color: #53A8E6;
   padding: 8px 12px;
   font-weight: bold;
   font-size: 18px;
+  color: #FFFFFF;
 }
+
 .questionSection {
     border-bottom: 3px solid #FFF;
 }
@@ -102,6 +150,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
 .questionSection .question:last-child .questionRow{
     border:0;
 }
@@ -114,8 +163,19 @@ body {
     font-size: 24px;
     cursor: pointer;
 }
+
 .fa-times {
     margin: 0 5px;
     font-size: 12px;
     color: #666;
+}
+
+input[type=checkbox]
+{
+  /* Double-sized Checkboxes */
+  -ms-transform: scale(1.6); /* IE */
+  -moz-transform: scale(1.6); /* FF */
+  -webkit-transform: scale(1.6); /* Safari and Chrome */
+  -o-transform: scale(1.6); /* Opera */
+  padding: 10px;
 }

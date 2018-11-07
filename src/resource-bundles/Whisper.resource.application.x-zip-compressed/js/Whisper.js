@@ -1,4 +1,69 @@
 var allTabs = {};
+
+class Setting { 
+    constructor() {
+        if (Setting.instance) {
+            return Setting.instance; 
+        }
+
+        this.maxDocuments = this.getMaxDocuments();
+        this.maxQuestions = this.getMaxQuestions();
+        Setting.instance = this;
+        let sourceSetting   = document.getElementById('setting-template').innerHTML;
+        this.settingTemplate = Handlebars.compile(sourceSetting);
+        this.settingElement = document.getElementById('settingSection');
+        return this;
+    }
+
+    getMaxDocuments() {
+        let retrieveMaxDocuments = localStorage.getItem('maxDocumentsWhisper');
+        let maxDocuments = retrieveMaxDocuments ? retrieveMaxDocuments : 10;
+        return maxDocuments;
+    } 
+
+    getMaxQuestions() {
+        let retrieveMaxQuestions = localStorage.getItem('maxQuestionsWhisper') ;
+        let maxQuestions = retrieveMaxQuestions ? retrieveMaxQuestions : 5;
+        return maxQuestions;
+    }
+
+    setMaxDocuments(maxDocuments) {
+        this.maxDocuments = maxDocuments;
+        localStorage.setItem('maxDocumentsWhisper',maxDocuments);
+    }
+ 
+    setMaxQuestions(maxQuestions) {
+        this.maxQuestions = maxQuestions;
+        localStorage.setItem('maxQuestionsWhisper',maxQuestions);
+    }
+
+    toggleVisibility(){
+        if(this.isVisible()) {
+            this.hide(); 
+        }
+        else {
+            this.show();
+        }
+    }
+    isVisible() {
+        return this.settingElement.style.display == 'none' ? false : true;
+    }
+
+    show() {
+        this.settingElement.style.display = 'initial';
+        let data = {
+            maxDocuments:  this.maxDocuments,
+            maxQuestions: this.maxQuestions
+        };
+
+        this.settingElement.innerHTML = this.settingTemplate(data);
+    }
+
+    hide() {
+        this.settingElement.style.display = 'none'; 
+    }
+}
+
 class ConversationTemplate {
 
     constructor(suggestionTemplate, questionTemplate, facetTemplate) {
@@ -31,7 +96,7 @@ class ConversationTemplate {
         let suggestionHtml = '';
         let questionHtml = '';
         let facetHtml = '';
-
+   
         if (this.suggestionContext)
             suggestionHtml = this.suggestions(this.suggestionContext);
         if (this.questionContext)
@@ -47,6 +112,8 @@ class ConversationTemplate {
 sforce.console.setCustomConsoleComponentPopoutable(false, null);
 
 var timeSend = null;
+
+
 const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
 const HEADERS = {
     "Content-Type": "application/json"
@@ -59,9 +126,14 @@ var messageType = {
     'Chasitor': 0,
     'Agent': 1
 };
+var setting = null;
+document.addEventListener("DOMContentLoaded", function() {
+    setting = new Setting();
+});
 
 var sentMessage = {};
 var chatStartedHandler = function(result) {
+    
     let chatKey = result.chatKey;
     let newInstanceTemplate = addNewInstance();
     addNewTab(result, newInstanceTemplate);    
@@ -87,8 +159,8 @@ var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
         chatkey: chatKey,
         Query: query,
         type: messageType[result.type],
-        maxDocuments:10,
-        maxQuestions: 5
+        maxDocuments: setting.maxDocuments,
+        maxQuestions: setting.maxQuestions
     };
 
     fetch( SUGGESTION_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
@@ -102,7 +174,7 @@ var onNewMessageHandler = function (result, chatKey, newInstanceTemplate) {
 }
 
 function fetchConversation(chatKey,template) {
-    fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}&maxDocuments=10&maxQuestions=5`)
+    fetch(`${SUGGESTION_ENDPOINT}?chatkey=${chatKey}&maxDocuments=${setting.maxDocuments}&maxQuestions=${setting.maxQuestions}`)
         .then(data => data.json())
         .then(json =>  createAll(json, chatKey,template))
         .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
@@ -160,12 +232,11 @@ function facetCancelClick(chatKey, facetId) {
     template.clear();
     let data = {
         chatkey: chatKey
-    };
+    }; 
 
     fetch(`${SUGGESTION_ENDPOINT}/facets/${facetId || ''}`, { method: "DELETE", body: JSON.stringify(data),  headers: HEADERS })
+        .then(() => fetchConversation(chatKey, template))
         .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
-    
-    fetchConversation(chatKey, template);
 }
 
 function chooseSuggestionClick(agentInput, chatKey, suggestionId, type) {
@@ -193,6 +264,18 @@ function changeVisibilityClick(element,idToHide) {
         classList.add(COLLAPSE_ICON);
         elementToHandle.style.display = "initial";
     }
+}
+
+function settingClick() {
+    setting.toggleVisibility();
+}
+
+function changeMaxDocuments(maxDocuments) {
+    setting.setMaxDocuments(maxDocuments);
+}
+
+function changeMaxQuestions(maxQuestions) {
+    setting.setMaxQuestions(maxQuestions);
 }
 
 function changeConversationContext(tabId) {

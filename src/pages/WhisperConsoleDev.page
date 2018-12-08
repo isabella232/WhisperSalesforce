@@ -3,6 +3,17 @@
     <apex:includeScript value="{!$Resource.handlebarjs}"/>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous"></link>
     <apex:stylesheet value="{!URLFOR($Resource.Whisper, '/css/Whisper.css')}"/>
+    <script>
+        Handlebars.registerHelper('ifeq', function (a, b, options) {
+            if (a === b) { return options.fn(this); }
+            return options.inverse(this);
+        });
+
+        Handlebars.registerHelper('ifnoteq', function (a, b, options) {
+            if (a !== b) { return options.fn(this); }
+            return options.inverse(this);
+        });
+    </script>
     <script id="suggestion-template" type="text/x-handlebars-template">
         <div class="suggestionSection">
             <div class="sectionHeader">You could suggest<i onclick="changeVisibilityClick(this,'allSuggestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
@@ -44,8 +55,14 @@
                     <span class="clearButton" onclick="facetCancelClick('{{../chatkey}}','{{id}}')">Clear</span>
                 </div>
                 <div class="facetValues">
-                    <input type="checkbox" name="{{name}}" value="{{value}}" checked="checked">
-                    <span class="facetValue">{{value}}</span>
+                    {{#ifeq this ../value}}
+                        <input type="checkbox" name="{{../name}}" value="{{this}}" 
+                            checked="checked" onclick="filterChangeRemove('{{../../chatkey}}','{{../this.id}}','{{../this.name}}','{{../this.value}}')">
+                    {{else}}
+                        <input type="checkbox" name="{{../name}}" value="{{this}}" 
+                            onclick="filterChangeAdd('{{../../chatkey}}','{{../this.id}}','{{../this.name}}','{{../this.value}}')">
+                    {{/ifeq}}
+                    <span class="facetValue">{{this}}</span>
                 </div>
             </div>
         {{/each}}

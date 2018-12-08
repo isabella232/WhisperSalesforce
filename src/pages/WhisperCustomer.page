@@ -11,17 +11,34 @@
             liveagent.showWhenOffline('5731N000000PxJf', document.getElementById('liveagent_button_offline_5731N000000PxJf'));
             });
         </script>
+        <style>
+            .btnWhisper {
+                color: #fff;
+                background: #00b5ad;
+                width: 250px;
+                padding: 13px 16px;
+                margin: 0 auto;
+                border-radius: 8px;
+                text-decoration: none;
+            }
+
+            .available:hover,  .available:hover *{
+                text-decoration: none;
+                color: #fff;
+                background-color:#009C95;
+            }
+        </style>
     </head>
     <body>
-        <div style="width:80%;margin:0 auto;text-align:center;">
-            <header style="height: 75px;background-color:yellow;padding:3%">
-                Client - Live agent chat 
+        <div style="margin:0 auto;text-align:center;background-color:#2D4343">
+            <header style="padding:3%">
+                <apex:image id="imageWhisper" value="{!URLFOR($Resource.Whisper, '/img/image_header.png')}" />
             </header>
-            <main style="background-color:rgb(0, 255, 42);min-height:200px;font-size:3em">
-                <a id="liveagent_button_online_5731N000000PxJf" href="javascript://Chat" style="display: none;" onclick="liveagent.startChat('5731N000000PxJf')">
+            <main style="min-height:200px;font-size:3em">
+                <a class="btnWhisper available" id="liveagent_button_online_5731N000000PxJf" href="javascript://Chat" style="display: none;" onclick="liveagent.startChat('5731N000000PxJf')">
                     Chat
                 </a>
-                <div id="liveagent_button_offline_5731N000000PxJf" style="display: none;">
+                <div class="btnWhisper" id="liveagent_button_offline_5731N000000PxJf" style="display: none;">
                     Not available
                 </div>
             </main>

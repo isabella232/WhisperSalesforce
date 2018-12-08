@@ -239,6 +239,32 @@ function facetCancelClick(chatKey, facetId) {
         .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
 }
 
+function filterChangeAdd(chatkey, id, name, value) { 
+    let template = allTabs[chatkey];
+    const facet = { id, name, value };
+    const data = {
+        chatkey: chatkey,
+        Facet: facet
+    };
+    template.clear();
+    fetch(`${SUGGESTION_ENDPOINT}/filter`, { method: "PUT", body: JSON.stringify(data),  headers: HEADERS })
+        .then(() => fetchConversation(chatkey, template))
+        .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+}
+
+function filterChangeRemove(chatkey, id, name, value) {
+    let template = allTabs[chatkey];
+    const facet = { id, name, value };
+    const data = {
+        chatkey: chatkey,
+        Facet: facet
+    };
+    template.clear();
+    fetch(`${SUGGESTION_ENDPOINT}/filter`, { method: "DELETE", body: JSON.stringify(data),  headers: HEADERS })
+        .then(() => fetchConversation(chatkey, template))
+        .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+}
+
 function chooseSuggestionClick(agentInput, chatKey, suggestionId, type) {
     // TODO -> Send UA Suggestion / Question choosen depending on type variable
     let data = {

@@ -13,17 +13,25 @@
             if (a !== b) { return options.fn(this); }
             return options.inverse(this);
         });
+
+        Handlebars.registerHelper('contains', function(list, elem, options) {
+            if(list.indexOf(elem) > -1) {
+                return options.fn(this);
+            }
+            return options.inverse(this);
+        });
+
     </script>
     <script id="suggestion-template" type="text/x-handlebars-template">
         <div class="suggestionSection">
             <div class="sectionHeader">You could suggest<i onclick="changeVisibilityClick(this,'allSuggestions')" class="visibiliteArrow fas fa-angle-down"></i></div>
             <div id="allSuggestions">
-            {{#each suggestions}}
-                <div class="suggestion" onclick="chooseSuggestionClick('{{title}} {{uri}}','{{../chatkey}}','{{id}}','suggestion')">
+            {{#each documents}}
+                <div class="suggestion" onclick="chooseSuggestionClick('{{value.title}} {{value.uri}}','{{../chatkey}}','{{value.id}}','suggestion')">
                     <div class="content">
-                        <div class="title sentence">{{title}}</div>
-                        <div class="excerpt">{{excerpt}}</div>
-                        <a class="sentence url" href="#" onclick="openURL('{{uri}}')">{{uri}}</a>
+                        <div class="title sentence">{{value.title}}</div>
+                        <div class="excerpt">{{value.excerpt}}</div>
+                        <a class="sentence url" href="#" onclick="openURL('{{value.uri}}')">{{value.uri}}</a>
                     </div>
                 </div>
             {{/each}}
@@ -36,7 +44,7 @@
             <div id="allQuestions">
             {{#each questions}}
                 <div class="question">
-                    <div class="questionRow" onclick="chooseSuggestionClick('{{text}}','{{../chatkey}}','{{id}}','question')">{{text}}</div>
+                    <div class="questionRow" onclick="chooseSuggestionClick('{{value.text}}','{{../chatkey}}','{{value.id}}','question')">{{value.text}}</div>
                 </div> 
             {{/each}}
             </div>
@@ -54,16 +62,18 @@
                     <span class="facetName">{{name}}</span>
                     <span class="clearButton" onclick="facetCancelClick('{{../chatkey}}','{{id}}')">Clear</span>
                 </div>
+                {{#each allValues}}
                 <div class="facetValues">
-                    {{#ifeq this ../value}}
+                    {{#contains ../values this }}
                         <input type="checkbox" name="{{../name}}" value="{{this}}" 
-                            checked="checked" onclick="filterChangeRemove('{{../../chatkey}}','{{../this.id}}','{{../this.name}}','{{../this.value}}')">
+                            checked="checked" onclick="filterChangeRemove('{{../../chatkey}}','{{../this.id}}','{{../this.name}}','{{this}}')">
                     {{else}}
                         <input type="checkbox" name="{{../name}}" value="{{this}}" 
-                            onclick="filterChangeAdd('{{../../chatkey}}','{{../this.id}}','{{../this.name}}','{{../this.value}}')">
-                    {{/ifeq}}
+                            onclick="filterChangeAdd('{{../../chatkey}}','{{../this.id}}','{{../this.name}}','{{this}}')">
+                    {{/contains}}
                     <span class="facetValue">{{this}}</span>
                 </div>
+                {{/each}}
             </div>
         {{/each}}
         </div>

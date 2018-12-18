@@ -76,8 +76,8 @@ class ConversationTemplate {
         this.questionContext = questionContext;
     }
 
-    setSuggestionContext(suggestionContext) {
-        this.suggestionContext = suggestionContext;
+    setdocumentContext(documentContext) {
+        this.documentContext = documentContext;
     }
     
     setFacetContext(facetContext) {
@@ -86,7 +86,7 @@ class ConversationTemplate {
 
     clear() {
         this.questionContext = null;
-        this.suggestionContext = null;
+        this.documentContext = null;
         this.facetContext = null;
         document.getElementById('conversations').innerHTML = '';
         document.getElementById('facets').innerHTML = '';
@@ -97,8 +97,8 @@ class ConversationTemplate {
         let questionHtml = '';
         let facetHtml = '';
    
-        if (this.suggestionContext)
-            suggestionHtml = this.suggestions(this.suggestionContext);
+        if (this.documentContext)
+            suggestionHtml = this.suggestions(this.documentContext);
         if (this.questionContext)
             questionHtml = this.questions(this.questionContext);
         if (this.facetContext)
@@ -115,6 +115,8 @@ var timeSend = null;
 
 
 const SUGGESTION_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/suggestions';
+const FACET_ENDPOINT = 'https://whisper-dev.us-east-1.elasticbeanstalk.com/whisper/facets';
+
 const HEADERS = {
     "Content-Type": "application/json"
 };
@@ -206,19 +208,32 @@ function createAll(json, chatKey, template) {
     }
 
     if (json.documents && json.documents.length > 0) {
-        let suggestionContext = {
-            suggestions: json.documents,
+        let documentContext = {
+            documents: json.documents,
             chatkey: chatKey,
         };
-        template.setSuggestionContext(suggestionContext);
+        template.setdocumentContext(documentContext);
     } 
 
     if (json.activeFacets && json.activeFacets.length > 0) {
-        let facetContext = {
-            facets: json.activeFacets,
-            chatkey: chatKey,
-        };
-        template.setFacetContext(facetContext);
+        let allFacetName = json.activeFacets.map(v => v.name);
+        getAllFacetValues(chatKey, allFacetName, facetValues => {
+            let facetContext = {
+                facets: [],
+                chatkey: chatKey,
+            };
+            facetValues.forEach(facetValue => {
+                const facet = json.activeFacets.find(e => e.name === facetValue.name);
+                facetContext.facets.push( {
+                    id: facet.id,
+                    name: facet.name,
+                    values: facet.values,
+                    allValues: facetValue.values
+                });
+            });
+            template.setFacetContext(facetContext);
+            template.refresh();
+        });     
     }
     
     console.log(`Execution time: ${(performance.now() - timeSend).toString()}`);
@@ -227,7 +242,6 @@ function createAll(json, chatKey, template) {
 }
 
 function facetCancelClick(chatKey, facetId) {
-    // TODO -> Send UA for facet cancel
     let template = allTabs[chatKey];
     template.clear();
     let data = {
@@ -239,8 +253,35 @@ function facetCancelClick(chatKey, facetId) {
         .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
 }
 
+function filterChangeAdd(chatkey, id, name, value) { 
+    let template = allTabs[chatkey];
+    const values = [value];
+    const facet = { id, name, values };
+    const data = {
+        chatkey: chatkey,
+        Facet: facet
+    };
+    template.clear();
+    fetch(`${SUGGESTION_ENDPOINT}/filter`, { method: "PUT", body: JSON.stringify(data),  headers: HEADERS })
+        .then(() => fetchConversation(chatkey, template))
+        .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+}
+
+function filterChangeRemove(chatkey, id, name, value) {
+    let template = allTabs[chatkey];
+    const values = [value];
+    const facet = { id, name, values };
+    const data = {
+        chatkey: chatkey,
+        Facet: facet
+    };
+    template.clear();
+    fetch(`${SUGGESTION_ENDPOINT}/filter`, { method: "DELETE", body: JSON.stringify(data),  headers: HEADERS })
+        .then(() => fetchConversation(chatkey, template))
+        .catch( error =>  console.log(`Invalid URL, there is no response. Error:  ${error}`));
+}
+
 function chooseSuggestionClick(agentInput, chatKey, suggestionId, type) {
-    // TODO -> Send UA Suggestion / Question choosen depending on type variable
     let data = {
         chatkey: chatKey,
         id: suggestionId
@@ -248,6 +289,17 @@ function chooseSuggestionClick(agentInput, chatKey, suggestionId, type) {
     fetch(`${SUGGESTION_ENDPOINT}/select`, { method: "POST", body: JSON.stringify(data),  headers: HEADERS })
         .catch( error =>   console.log(`Invalid URL, there is no response. Error:  ${error}`));
     sforce.console.chat.setAgentInput(chatKey, agentInput, null);
+}
+
+function getAllFacetValues(chatKey, facetNames, callback) {
+    let data = {
+        chatkey: chatKey,
+        facetsName: facetNames
+    };
+    fetch(FACET_ENDPOINT, { method: "POST", body: JSON.stringify(data),  headers: HEADERS }) 
+        .then(data => data.json())
+        .then( facetValues => callback(facetValues))
+        .catch(error => console.log(`Error:  ${error}`));
 }
 
 function changeVisibilityClick(element,idToHide) {
